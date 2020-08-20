@@ -7,7 +7,7 @@ using System.Collections;
 [AddComponentMenu ("Camera Filter Pack/Blend 2 Camera/BOverlapA")]
 public class CameraFilterPack_Blend2Camera_BOverlapA : MonoBehaviour {
 #region Variables
-private string ShaderName="CameraFilterPack/Blend2Camera_Blend";
+private string ShaderName = "CameraFilterPack/Blend2Camera_BOverlapA";
 public Shader SCShader;
 public Camera Camera2; 
 private float TimeX = 1.0f;
