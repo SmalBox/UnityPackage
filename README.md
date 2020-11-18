@@ -1,7 +1,9 @@
 # AutoUI 框架说明
+
 ## 简介
    - **AutoUI框架**来组织**页面**切换的通用逻辑。
    - 只需定制每个**页面**的业务逻辑内容，将页面的切换交给框架来处理。
+   - *当前版本:* **AutoUI-V0.02**
 
 ## 功能
    - AutoUI 框架提供 页面管理工具 *(菜单栏的Window/AutoUI)* ，可自动创建页面（生成预制体、创建脚本、更新路径配置文件、挂载脚本），业务内容填充到页面当中，页面之间的切换用框架提供的打开和返回功能进行切换即可。
@@ -77,8 +79,72 @@
       UIManager.instance.ReturnPanel(0, "RedPage");
       ```
 
+## 内置页面内容模板组件
+   - AutoUI 框架内提供一些已完成的常用页面组件，可在页面中直接使用。
+   - 组件prefab在 AutoUI/Resources/Prefabs/PageComponents/ 中
+   - **单级返回按钮**
+      - BtnReturn
+   - **主菜单快速切换**
+      - MainMenuQuickBar
+   - **读取本地数据的文本**
+      - News
+   - **滑动、点击切换图片、视频**
+      - Scroll View Click H
+      - Scroll View Click V
+      - Scroll View Swipe H
+         - 功能最完善，推荐使用
+      - Scroll View Swipe V
+   - **标记文本**
+      - TagText
+   - **视频内容组，播放过场视频后循环播放另一个视频**
+      - VideoContentGroup
+
 ## 高级功能
    - **创建页面管理工具**
       - 更改默认创建页面预制体基类
          - 默认创建工具会将 **BasePage** 预制体作为模板基类，创建新的页面。
          - 当已经创建好的页面想要加入到框架的页面当中时，则需要在 *（Assets/AutoUI/Scripts/Editor/AutoUI.cs）* 脚本的Inspector面板中替换 **BasePagePrefab**，即可在创建时将其作为源预制体页面添加到框架中。
+   - **页面切换的动画设置与自定义**
+      - 可以在页面的生命周期的 OnShowAnim() 和 OnClosingAnim() 中定义关闭的动画。
+      - 内置了三种切换方式：
+         - 直接切换无过度
+         - 渐变切换
+         - 缩放切换
+      - 使用方式：
+         ``` c#
+         // 渐变过度
+         Transition.Show(gameObject);
+         Transition.Hide(gameObject);
+
+         // 缩放过度
+         Transition.ShowZoom(gameObject);
+         Transition.HideZoom(gameObject);
+
+         // 直接切换
+         Transition.DirectShow(gameObject);
+         Transition.DirectHide(gameObject);
+         ```
+      - 方法原型如下：
+         ``` c#
+         public static void Show(GameObject gameObject, float showTime = GlobalVar.animTimeOfOpenClosePage){}
+         public static void Hide(GameObject gameObject, float hideTime = GlobalVar.animTimeOfClosePage){}
+
+         public static void ShowZoom(GameObject gameObject){}
+         public static void HideZoom(GameObject gameObject){}
+
+         public static void DirectShow(GameObject gameObject){}
+         public static void DirectHide(GameObject gameObject){}
+         ```
+   - **实用工具类：AutoUIUtilities**
+      - **读取配置文件属性**
+         ``` c#
+         // 使用GetInfoForConfig方法获取属性
+         string timeStr = AutoUIUtilities.GetInfoForConfig("Time");
+
+         // 方法原型
+         public static string GetInfoForConfig(string dataName)
+         ```
+         - 配置文件在StreamingAssets/Config/Config.txt中
+         - 配置文件以 ##属性名##:属性值 的方式配置。例如：
+            - ##Time##:10
+            - 表示 Time 这个属性值是 1
