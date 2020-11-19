@@ -3,7 +3,7 @@
 ## 简介
    - **AutoUI框架**来组织**页面**切换的通用逻辑。
    - 只需定制每个**页面**的业务逻辑内容，将页面的切换交给框架来处理。
-   - *当前版本:* **AutoUI-V0.02**
+   - *当前版本:* **AutoUI-V0.022**
 
 ## 功能
    - AutoUI 框架提供 页面管理工具 *(菜单栏的Window/AutoUI)* ，可自动创建页面（生成预制体、创建脚本、更新路径配置文件、挂载脚本），业务内容填充到页面当中，页面之间的切换用框架提供的打开和返回功能进行切换即可。
@@ -82,22 +82,27 @@
 ## 内置页面内容模板组件
    - AutoUI 框架内提供一些已完成的常用页面组件，可在页面中直接使用。
    - 组件prefab在 AutoUI/Resources/Prefabs/PageComponents/ 中
-   - **单级返回按钮**
-      - BtnReturn
-   - **主菜单快速切换**
-      - MainMenuQuickBar
-   - **读取本地数据的文本**
-      - News
-   - **滑动、点击切换图片、视频**
-      - Scroll View Click H
-      - Scroll View Click V
-      - Scroll View Swipe H
-         - 功能最完善，推荐使用
-      - Scroll View Swipe V
-   - **标记文本**
-      - TagText
-   - **视频内容组，播放过场视频后循环播放另一个视频**
-      - VideoContentGroup
+      - **单级返回按钮**
+         - BtnReturn
+      - **主菜单快速切换**
+         - MainMenuQuickBar
+      - **读取本地数据的文本**
+         - News
+      - **滑动、点击切换图片、视频**
+         - Scroll View Click H
+         - Scroll View Click V
+         - Scroll View Swipe H
+            - 功能最完善，推荐使用
+         - Scroll View Swipe V
+      - **标记文本**
+         - TagText
+      - **视频内容组，播放过场视频后循环播放另一个视频**
+         - VideoContentGroup
+   - **预设页**
+      - 页面在 AutoUI/Resources/Prefabs/Pages/ 中
+      - **待机页**
+         - StandbyPage
+            - **功能:** 包含循环播放视频，点击跳转页面接口，配置文件设置时间自动返回待机页
 
 ## 高级功能
    - **创建页面管理工具**
