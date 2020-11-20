@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Text;
 using System.IO;
+using SmalBox.AutoUI;
 
 public class SceneManage : MonoBehaviour
 {

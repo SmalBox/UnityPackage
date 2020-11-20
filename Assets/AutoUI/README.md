@@ -3,7 +3,8 @@
 ## 简介
    - **AutoUI框架**来组织**页面**切换的通用逻辑。
    - 只需定制每个**页面**的业务逻辑内容，将页面的切换交给框架来处理。
-   - *当前版本:* **AutoUI-V0.022**
+   - *当前版本:* **AutoUI-V0.023**
+   - *Author:* [SmalBox](https://smalbox.top),*GitHub:* [GitHub/SmalBox](https://github.com/smalbox)
 
 ## 功能
    - AutoUI 框架提供 页面管理工具 *(菜单栏的Window/AutoUI)* ，可自动创建页面（生成预制体、创建脚本、更新路径配置文件、挂载脚本），业务内容填充到页面当中，页面之间的切换用框架提供的打开和返回功能进行切换即可。
@@ -18,6 +19,10 @@
       - public virtual void **OnClosed()** // **关闭后**
    - 制作每个页面时，将业务代码写在以上生命周期方法中，在框架切换页面时，会自动调用这些方法，来正确切换页面。
    - 每个页面有 **层级** 属性，可以在 inspector 中调整面板层级。层级会让页面在动态生成时，生成在相应的层级父物体下，来实现UI层级遮挡。
+   - AutoUI 框架中使用 **页面栈** 来组织保留页面。每打开一个页面会新建一个页面然后入栈。每当返回时会销毁栈顶页面来完成返回操作。
+      - **页面栈** 从0层开始计算。
+      - 一般来讲不要在业务逻辑里 **直接操作栈结构** ，不要破坏栈结构的组织方式随意跳转清理栈。
+      - 在 *AutoUI/Scripts/UIManager.cs* 中添加新的方法来扩展框架功能，栈的操作可以在此进行封装扩展。
 
 ## 配置
    - 场景中创建空物体来添加以下脚本：
@@ -31,6 +36,10 @@
       - 将以上空物体拖到UIManager的Inspector面板
 
 ## 功能及使用
+   - **命名空间**
+      ``` c#
+      using SmalBox.AutoUI;
+      ```
    - **打开面板**
       ``` c#
       /// <summary>
@@ -68,6 +77,15 @@
       /// <param name="panelName">新打开面板的名字</param>
       /// <param name="args">扩展参数</param>
       public void ReturnPanel(int layer, string panelName, params object[] args)
+      ```
+   - **跳转到栈的某层，打开某页面**
+      ``` c#
+      /// <summary>
+      /// 跳转到栈的某层，打开某页面
+      /// </summary>
+      /// <param name="layer">跳转的目标层</param>
+      /// <param name="panelName">新打开的页面名</param>
+      public void JumpToOpenPanel(int layer, string panelName)
       ```
 
    - **使用例子：**

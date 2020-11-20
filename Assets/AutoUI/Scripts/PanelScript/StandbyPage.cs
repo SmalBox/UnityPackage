@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using SmalBox.AutoUI;
 
 public class StandbyPage : PanelBase
 {
