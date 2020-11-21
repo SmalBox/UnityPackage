@@ -3,7 +3,7 @@
 ## 简介
    - **AutoUI框架**来组织**页面**切换的通用逻辑。
    - 只需定制每个**页面**的业务逻辑内容，将页面的切换交给框架来处理。
-   - *当前版本:* **AutoUI-V0.023**
+   - *当前版本:* **AutoUI-V0.024**
    - *Author:* [SmalBox](https://smalbox.top),*GitHub:* [GitHub/SmalBox](https://github.com/smalbox)
 
 ## 功能
@@ -116,6 +116,8 @@
          - TagText
       - **视频内容组，播放过场视频后循环播放另一个视频**
          - VideoContentGroup
+      - **VideoPlayer解决视频残留的UGUI组件**
+         - VideoPlayer
    - **预设页**
       - 页面在 AutoUI/Resources/Prefabs/Pages/ 中
       - **待机页**

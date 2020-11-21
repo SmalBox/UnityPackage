@@ -857,8 +857,8 @@ MonoBehaviour:
     width: 1
     height: 1
   _setNativeSize: 0
-  _scaleMode: 2
-  _noDefaultDisplay: 1
+  _scaleMode: 0
+  _noDefaultDisplay: 0
   _displayInEditor: 1
   _defaultTexture: {fileID: 0}
 --- !u!114 &7204709064311416244
@@ -1038,8 +1038,8 @@ MonoBehaviour:
     width: 1
     height: 1
   _setNativeSize: 0
-  _scaleMode: 2
-  _noDefaultDisplay: 1
+  _scaleMode: 0
+  _noDefaultDisplay: 0
   _displayInEditor: 1
   _defaultTexture: {fileID: 0}
 --- !u!114 &7204709064328635598
@@ -1219,8 +1219,8 @@ MonoBehaviour:
     width: 1
     height: 1
   _setNativeSize: 0
-  _scaleMode: 2
-  _noDefaultDisplay: 1
+  _scaleMode: 0
+  _noDefaultDisplay: 0
   _displayInEditor: 1
   _defaultTexture: {fileID: 0}
 --- !u!114 &7204709064384921586
@@ -1459,7 +1459,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.9150943, g: 0.9150943, b: 0.9150943, a: 1}
   m_RaycastTarget: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
@@ -1769,8 +1769,8 @@ MonoBehaviour:
     width: 1
     height: 1
   _setNativeSize: 0
-  _scaleMode: 2
-  _noDefaultDisplay: 1
+  _scaleMode: 0
+  _noDefaultDisplay: 0
   _displayInEditor: 1
   _defaultTexture: {fileID: 0}
 --- !u!114 &7204709064867181251
@@ -1934,7 +1934,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.9150943, g: 0.9150943, b: 0.9150943, a: 1}
   m_RaycastTarget: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
@@ -2066,7 +2066,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 7204709063945652270}
   m_Direction: 0
   m_Value: 0.00000008477105
-  m_Size: 0.25000003
+  m_Size: 0.25
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
