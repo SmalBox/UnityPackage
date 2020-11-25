@@ -3,7 +3,11 @@
 ## 简介
    - **AutoUI框架**来组织**页面**切换的通用逻辑。
    - 只需定制每个**页面**的业务逻辑内容，将页面的切换交给框架来处理。
-   - *当前版本:* **AutoUI-V0.024**
+   - *当前版本:* **AutoUI-V0.025**
+      - 更新内容：
+         - 新增UDP客户端发送和接收消息脚本组件。
+         - 修复 “AutoUIUtilities.GetInfoForConfig” 实用工具获取配置文件时index越界问题。
+         - 设定MainScene中预设的Canvas的CanvasScaler组件属性固定为1920*1080分辨率。
    - *Author:* [SmalBox](https://smalbox.top),*GitHub:* [GitHub/SmalBox](https://github.com/smalbox)
 
 ## 功能
@@ -123,6 +127,12 @@
       - **待机页**
          - StandbyPage
             - **功能:** 包含循环播放视频，点击跳转页面接口，配置文件设置时间自动返回待机页
+   - **网络组件**
+      - 网络组件位于 AutoUI/Scripts/Network/ 中
+      - **UDPClient**
+         - 获取本组件，注册 **SocketReceiveCallBack** 用来接收消息，用 **Send** 发送消息。
+         - *注：本组件需要实用工具中的AutoUIUtilities.GetInfoForConfig来帮助获取ip端口配置文件。*
+         - 在 StreamingAssets/Config/Config.txt 中 的 **UDPServerIP**, **UDPServerPort** 属性填写对应的ip和端口号。在程序中获取此组件注册回调来接收消息，调用Send可以发送消息（消息是ASCII编码，不要输入此编码外的字符，例如不要传输中文，使用ASCII表中的字符）。
 
 ## 高级功能
    - **创建页面管理工具**

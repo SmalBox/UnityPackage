@@ -19,7 +19,7 @@ namespace SmalBox.AutoUI
         {
             foreach (string data in File.ReadLines(Application.streamingAssetsPath + "/Config/Config.txt"))
             {
-                if (data.Length > dataName.Length)
+                if (data.Length > dataName.Length + 5)
                 {
                     if ("##" + dataName + "##:" == data.Substring(0, dataName.Length + 5))
                     {
