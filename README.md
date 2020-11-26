@@ -24,6 +24,8 @@
          // 返回 上一页面
          UIManager.instance.ReturnPanel();
          ```
+   - V0.026更新内容：
+      - 添加AutoUI页面管理器的 修改page名 功能。
    - V0.025更新内容：
       - 新增UDP客户端发送和接收消息脚本组件。
       - 修复 “AutoUIUtilities.GetInfoForConfig” 实用工具获取配置文件时index越界问题。
