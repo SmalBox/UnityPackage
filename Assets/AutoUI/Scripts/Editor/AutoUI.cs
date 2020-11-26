@@ -20,8 +20,10 @@ namespace SmalBox
             public GameObject basePagePrefab;
             private Vector2 scrollViewVectorPages = Vector2.zero;
             private Vector2 scrollViewVectorBg = Vector2.zero;
-            private float factScreenHeight = 340;
+            private float factScreenHeight = 410;
             string pageName = "NewPage";
+            string pageNameNew = "NewName";
+            string pageNameChange = "";
             static string pageClass =
 @"using DG.Tweening.Plugins.Core.PathCore;
 using RenderHeads.Media.AVProVideo;
@@ -154,6 +156,7 @@ public class ##ClassName## : PanelBase
                     Debug.Log("页面类创建完成！" + Application.dataPath + "/AutoUI/Scripts/PanelScript/" + pageName + ".cs");
 
                     AssetDatabase.Refresh();
+                    Debug.Log("请点击 【挂载组件】 按钮，挂载" + pageName + "组件。");
 
                     //// 手动开启编译类
                     //AssemblyBuilder assemblyBuilder = new AssemblyBuilder(pageName + ".dll",
@@ -272,6 +275,7 @@ public class ##ClassName## : PanelBase
                             if (GUILayout.Button(Path.GetFileName(pagesPath[i])))
                             {
                                 pageName = Path.GetFileNameWithoutExtension(pagesPath[i]);
+                                pageNameChange = Path.GetFileNameWithoutExtension(pagesPath[i]);
                             }
                         }
                     }
@@ -292,6 +296,93 @@ public class ##ClassName## : PanelBase
                 GUILayout.EndVertical();
                 GUILayout.EndHorizontal();
                 GUI.EndScrollView();
+
+                #region 修改Page名字信息
+                GUILayout.BeginArea(new Rect(0, factScreenHeight-80, Screen.width, 64));
+                GUI.Box(new Rect(0, 0, Screen.width, 60), "");
+                GUILayout.BeginHorizontal();
+                    GUILayout.BeginVertical();
+                        GUILayout.BeginHorizontal();
+                            GUILayout.Label("从当前Page框选择Page〖");
+                            GUILayout.Label(pageNameChange);
+                        GUILayout.EndHorizontal();
+                        GUILayout.BeginHorizontal();
+                            GUILayout.Label("新Page名:");
+                            pageNameNew = GUILayout.TextField(pageNameNew);
+                        GUILayout.EndHorizontal();
+                    GUILayout.EndVertical();
+
+                    GUILayout.BeginVertical();
+                        GUILayout.Label("〗修改此Page名");
+                        if (GUILayout.Button("修改Page名"))
+                        {
+                            if (!FileNameRegCheck(pageNameNew)) return;
+                            // 修改page名，为挂载组件做准备
+                            pageName = pageNameNew;
+                            // 修改配置文件信息
+                            // 从SkinDict.json中读取配置文件
+                            var skinDict = new Dictionary<string, string>();
+                            string skinDictStr = Resources.Load<TextAsset>("Config/SkinDict").text;
+                            JsonData data = JsonMapper.ToObject(skinDictStr);
+                            // 添加配置文件到字典
+                            for (int i = 0; i < data.Count; i++)
+                            {
+                                skinDict.Add(data[i][0].ToString(), data[i][1].ToString());
+                            }
+                            skinDict.Remove(pageNameChange);
+                            skinDict.Add(pageNameNew, "Prefabs/Pages/" + pageNameNew);
+                            List<GlobalVar.PagesPathDict> pagePathDictList = new List<GlobalVar.PagesPathDict>();
+                            foreach (var item in skinDict)
+                            {
+                                var pagePathDict = new GlobalVar.PagesPathDict();
+                                pagePathDict.Name = item.Key;
+                                pagePathDict.Path = item.Value;
+                                pagePathDictList.Add(pagePathDict);
+                            }
+                            string newSkinDict = JsonMapper.ToJson(pagePathDictList);
+                            File.WriteAllText(Application.dataPath + "/AutoUI/Resources/Config/SkinDict.json", newSkinDict);
+                            Debug.Log("页面配置文件写入完成！" + Application.dataPath + "Assets/AutoUI/Resources/Config/SkinDict.json");
+                            AssetDatabase.Refresh();
+
+                            // 修改预制体名
+                            AssetDatabase.RenameAsset(
+                                "Assets/AutoUI/Resources/Prefabs/Pages/" + pageNameChange + ".prefab",
+                                pageNameNew + ".prefab");
+                            AssetDatabase.Refresh();
+
+                            // 删除旧的组件
+                            // 加载创建的新page预制体
+                            var pagePrefab = PrefabUtility.InstantiatePrefab(
+                                Resources.Load("Prefabs/Pages/" + pageNameNew)) as GameObject;
+
+                            // 删除组件
+                            if (pagePrefab.GetComponent(System.Reflection.Assembly.Load("Assembly-CSharp").GetType(pageNameChange)))
+                                DestroyImmediate(pagePrefab.GetComponent(System.Reflection.Assembly.Load("Assembly-CSharp").GetType(pageNameChange)));
+                            // 保存修改
+                            PrefabUtility.SaveAsPrefabAsset(pagePrefab,
+                                "Assets/AutoUI/Resources/Prefabs/Pages/" + pageNameNew + ".prefab");
+                            AssetDatabase.Refresh();
+                            DestroyImmediate(pagePrefab);
+
+                            Debug.Log("页面预制体修改完成！" + "Assets/AutoUI/Resources/Prefabs/Pages/" + pageNameNew + ".prefab");
+                            AssetDatabase.Refresh();
+
+                            // 修改脚本名
+                            string pageClassOld = File.ReadAllText(Application.dataPath + "/AutoUI/Scripts/PanelScript/" + pageNameChange + ".cs");
+                            string pageClassNew = pageClassOld.Replace("public class " + pageNameChange, "public class " + pageNameNew);
+                            File.WriteAllText(Application.dataPath + "/AutoUI/Scripts/PanelScript/" + pageNameChange + ".cs", pageClassNew);
+                            File.Move(Application.dataPath + "/AutoUI/Scripts/PanelScript/" + pageNameChange + ".cs",
+                                Application.dataPath + "/AutoUI/Scripts/PanelScript/" + pageNameNew + ".cs");
+                            Debug.Log("页面类修改完成！" + Application.dataPath + "/AutoUI/Scripts/PanelScript/" + pageNameNew + ".cs");
+
+                            AssetDatabase.Refresh();
+                            Debug.Log("请点击 【挂载组件】 按钮，重新挂载新的" + pageNameNew + "组件。");
+                        }
+                    GUILayout.EndVertical();
+                GUILayout.EndHorizontal();
+                GUILayout.Label("注意：修改名字后，需要重新挂载组件，组件上需要赋值的属性需重新赋值。", EditorStyles.helpBox);
+                GUILayout.EndArea();
+                #endregion
 
                 GUI.EndScrollView();
             }

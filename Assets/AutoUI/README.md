@@ -3,11 +3,9 @@
 ## 简介
    - **AutoUI框架**来组织**页面**切换的通用逻辑。
    - 只需定制每个**页面**的业务逻辑内容，将页面的切换交给框架来处理。
-   - *当前版本:* **AutoUI-V0.025**
+   - *当前版本:* **AutoUI-V0.026**
       - 更新内容：
-         - 新增UDP客户端发送和接收消息脚本组件。
-         - 修复 “AutoUIUtilities.GetInfoForConfig” 实用工具获取配置文件时index越界问题。
-         - 设定MainScene中预设的Canvas的CanvasScaler组件属性固定为1920*1080分辨率。
+         - 添加AutoUI页面管理器的 修改page名 功能。
    - *Author:* [SmalBox](https://smalbox.top),*GitHub:* [GitHub/SmalBox](https://github.com/smalbox)
 
 ## 功能
