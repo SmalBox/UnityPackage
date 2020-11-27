@@ -246,6 +246,7 @@ public class ##ClassName## : PanelBase
                         File.Delete(Application.dataPath + "/AutoUI/Scripts/PanelScript/" + pageName + ".cs.meta");
                     Debug.Log("页面脚本清理完成！");
                     AssetDatabase.Refresh();
+                    pageNameChange = "";
                 }
                 GUILayout.EndHorizontal();
 
@@ -317,8 +318,14 @@ public class ##ClassName## : PanelBase
                         if (GUILayout.Button("修改Page名"))
                         {
                             if (!FileNameRegCheck(pageNameNew)) return;
+                            if (pageNameChange == "")
+                            {
+                                Debug.LogWarning("【请点击要更改的页面！】");
+                                return;
+                            }
                             // 修改page名，为挂载组件做准备
                             pageName = pageNameNew;
+
                             // 修改配置文件信息
                             // 从SkinDict.json中读取配置文件
                             var skinDict = new Dictionary<string, string>();
@@ -328,6 +335,11 @@ public class ##ClassName## : PanelBase
                             for (int i = 0; i < data.Count; i++)
                             {
                                 skinDict.Add(data[i][0].ToString(), data[i][1].ToString());
+                            }
+                            if (!skinDict.ContainsKey(pageNameChange))
+                            {
+                                Debug.LogWarning("【页面不存在，请重新选择页面！】");
+                                return;
                             }
                             skinDict.Remove(pageNameChange);
                             skinDict.Add(pageNameNew, "Prefabs/Pages/" + pageNameNew);
@@ -343,6 +355,7 @@ public class ##ClassName## : PanelBase
                             File.WriteAllText(Application.dataPath + "/AutoUI/Resources/Config/SkinDict.json", newSkinDict);
                             Debug.Log("页面配置文件写入完成！" + Application.dataPath + "Assets/AutoUI/Resources/Config/SkinDict.json");
                             AssetDatabase.Refresh();
+
 
                             // 修改预制体名
                             AssetDatabase.RenameAsset(
@@ -376,6 +389,9 @@ public class ##ClassName## : PanelBase
                             Debug.Log("页面类修改完成！" + Application.dataPath + "/AutoUI/Scripts/PanelScript/" + pageNameNew + ".cs");
 
                             AssetDatabase.Refresh();
+
+
+                            pageNameChange = "";
                             Debug.Log("请点击 【挂载组件】 按钮，重新挂载新的" + pageNameNew + "组件。");
                         }
                     GUILayout.EndVertical();

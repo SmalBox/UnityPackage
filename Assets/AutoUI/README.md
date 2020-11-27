@@ -3,9 +3,10 @@
 ## 简介
    - **AutoUI框架**来组织**页面**切换的通用逻辑。
    - 只需定制每个**页面**的业务逻辑内容，将页面的切换交给框架来处理。
-   - *当前版本:* **AutoUI-V0.026**
+   - *当前版本:* **AutoUI-V0.027**
       - 更新内容：
-         - 添加AutoUI页面管理器的 修改page名 功能。
+         - 修复AutoUI页面管理器的 修改page名 功能 中 修改的页面的差错控制。
+         - 修复ReturnPanel中 返回任意级别菜单、返回跳转 中跳转到本层的判断。
    - *Author:* [SmalBox](https://smalbox.top),*GitHub:* [GitHub/SmalBox](https://github.com/smalbox)
 
 ## 功能

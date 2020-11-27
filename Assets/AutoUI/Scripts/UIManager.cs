@@ -214,7 +214,7 @@ namespace SmalBox.AutoUI
         /// <param name="args"></param>
         public void ReturnPanel(int layer, bool showLastPanelAnim = false, params object[] args)
         {
-            if (layer >= panelStack.Count || panelStack.Count < 2) return;
+            if (layer >= panelStack.Count - 1 || panelStack.Count < 2) return;
             // 栈顶面板出栈，并关闭栈顶面板
             var topPanel = panelStack.Pop();
             ClosePanel(topPanel.GetType().Name);
@@ -240,13 +240,16 @@ namespace SmalBox.AutoUI
         public void ReturnPanel(int layer, string panelName, params object[] args)
         {
             if (layer >= panelStack.Count || panelStack.Count < 2) return;
-            // 栈顶面板出栈，并关闭栈顶面板
-            var topPanel = panelStack.Pop();
-            ClosePanel(topPanel.GetType().Name);
-            while (panelStack.Count - 1 > layer)
+            if (layer != panelStack.Count - 1)
             {
-                topPanel = panelStack.Pop();
+                // 栈顶面板出栈，并关闭栈顶面板
+                var topPanel = panelStack.Pop();
                 ClosePanel(topPanel.GetType().Name);
+                while (panelStack.Count - 1 > layer)
+                {
+                    topPanel = panelStack.Pop();
+                    ClosePanel(topPanel.GetType().Name);
+                }
             }
             // 打开新面板
             var newPanel = CreatePanel(panelName);
