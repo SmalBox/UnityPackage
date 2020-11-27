@@ -41,8 +41,12 @@ public class SceneManage : MonoBehaviour
                 // 返回待机页
                 UIManager.instance.ReturnPanel(0);
             }
-
         }
+        if (Input.GetMouseButtonDown(0))
+        {
+            GetComponent<UDPClient>().Send("I'm Client");
+        }
+        
     }
 
 }

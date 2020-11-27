@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEngine.UI;
 using System.IO;
 using System;
+using System.Threading;
 using System.Reflection;
 using System.Threading.Tasks;
 using UnityEditor.Compilation;
@@ -69,6 +70,7 @@ public class ##ClassName## : PanelBase
             public static void ShowWindow()
             {
                 EditorWindow.GetWindow(typeof(AutoUI));
+                PlayerPrefs.SetString("PageName", "NewPage");
             }
 
             private void OnGUI()
@@ -78,14 +80,14 @@ public class ##ClassName## : PanelBase
                 //GUI.skin = autoUISkin;
                 //if (GUILayout.Button("测试按钮"))
                 //{
-                //    //Debug.Log(typeof(NewPage).Assembly);
-                //    //Debug.Log(Assembly.GetExecutingAssembly());
-                //    //var pagePrefab = PrefabUtility.InstantiatePrefab(
-                //    //    Resources.Load("Prefabs/Pages/" + pageName)) as GameObject;
-                //    //Debug.Log(Assembly.Load("Assembly-CSharp").GetType(pageName));
-                //    //Debug.Log(Assembly.Load("Assembly-CSharp-Editor").GetType(pageName));
-                //    //FileNameRegCheck(pageName);
-                //    Debug.Log(AssetDatabase.GetAssetPath(basePagePrefab));
+                    //    //Debug.Log(typeof(NewPage).Assembly);
+                    //    //Debug.Log(Assembly.GetExecutingAssembly());
+                    //    //var pagePrefab = PrefabUtility.InstantiatePrefab(
+                    //    //    Resources.Load("Prefabs/Pages/" + pageName)) as GameObject;
+                    //    //Debug.Log(Assembly.Load("Assembly-CSharp").GetType(pageName));
+                    //    //Debug.Log(Assembly.Load("Assembly-CSharp-Editor").GetType(pageName));
+                    //    //FileNameRegCheck(pageName);
+                    //    Debug.Log(AssetDatabase.GetAssetPath(basePagePrefab));
                 //}
                 if (Screen.height < factScreenHeight)
                     scrollViewVectorBg = GUI.BeginScrollView(
@@ -102,7 +104,7 @@ public class ##ClassName## : PanelBase
                 GUILayout.Label("自动Page管理说明：", EditorStyles.boldLabel);
                 GUILayout.Label("0. 先输入 Page名 （首字母大写驼峰格式，Page作为后缀）。", EditorStyles.helpBox);
                 GUILayout.Label("1.1 点击 创建Page 按钮创建页面。", EditorStyles.helpBox);
-                GUILayout.Label("1.2 点击 挂载组件 按钮给页面挂载组件。\n(页面创建完成路径在ReSources/Prefabs/Pages/中)", EditorStyles.helpBox);
+                GUILayout.Label("1.2 等待脚本编译完成，将自动挂载Page脚本。\n(页面创建完成路径在ReSources/Prefabs/Pages/中)", EditorStyles.helpBox);
                 GUILayout.Label("2.1 点击 删除Page 按钮 自动清除页面相关数据。\n(会清除页面预制体、脚本、路径配置文件)", EditorStyles.helpBox);
 
                 //pageName = EditorGUILayout.TextField("Page名：", pageName);
@@ -112,7 +114,7 @@ public class ##ClassName## : PanelBase
                 GUILayout.EndHorizontal();
 
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button("1.创建Page"))
+                if (GUILayout.Button("创建Page"))
                 {
                     if (!FileNameRegCheck(pageName)) return;
                     // 更新页面配置文件
@@ -137,7 +139,7 @@ public class ##ClassName## : PanelBase
                     string newSkinDict = JsonMapper.ToJson(pagePathDictList);
                     File.WriteAllText(Application.dataPath + "/AutoUI/Resources/Config/SkinDict.json", newSkinDict);
                     Debug.Log("页面配置文件写入完成！" + Application.dataPath + "Assets/AutoUI/Resources/Config/SkinDict.json");
-                    AssetDatabase.Refresh();
+                    //AssetDatabase.Refresh();
 
                     // 从Prefabs的Pages中复制一个BasePage，然后用pageName重命名得到新page预制体
                     //AssetDatabase.CopyAsset(
@@ -148,58 +150,39 @@ public class ##ClassName## : PanelBase
                         "Assets/AutoUI/Resources/Prefabs/Pages/" + pageName + ".prefab");
 
                     Debug.Log("页面预制体创建完成！" + "Assets/AutoUI/Resources/Prefabs/Pages/" + pageName + ".prefab");
-                    AssetDatabase.Refresh();
+                    //AssetDatabase.Refresh();
 
                     // 用名字创建类
                     pageClass = pageClass.Replace("##ClassName##", pageName);
                     File.WriteAllText(Application.dataPath + "/AutoUI/Scripts/PanelScript/" + pageName + ".cs", pageClass);
                     Debug.Log("页面类创建完成！" + Application.dataPath + "/AutoUI/Scripts/PanelScript/" + pageName + ".cs");
 
+                    PlayerPrefs.SetInt("StartMountCom", 1);
+                    AssetDatabase.ImportAsset("Assets/AutoUI/Scripts/PanelScript/" + pageName + ".cs", ImportAssetOptions.ForceUpdate);
+
                     AssetDatabase.Refresh();
-                    Debug.Log("请点击 【挂载组件】 按钮，挂载" + pageName + "组件。");
-
-                    //// 手动开启编译类
-                    //AssemblyBuilder assemblyBuilder = new AssemblyBuilder(pageName + ".dll",
-                    //    "Assets/AutoUI/Scripts/PanelScript/" + pageName + ".cs");
-                    //assemblyBuilder.buildStarted += (string assemblyPath) => { Debug.Log("开始构建：" + assemblyPath); };
-                    //assemblyBuilder.buildFinished += (string assemblyPath, CompilerMessage[] compilerMessages) => {
-                    //    Debug.Log("完成构建：");
-
-                    //    // 将创建的新类挂载到复制的新资产上
-                    //    // 加载创建的新page预制体
-                    //    var pagePrefab = PrefabUtility.InstantiatePrefab(
-                    //        Resources.Load("Prefabs/Pages/" + pageName)) as GameObject;
-
-                    //    // 添加组件
-                    //    pagePrefab.AddComponent(System.Reflection.Assembly.Load("Assembly-CSharp").GetType(pageName));
-                    //    // 保存修改
-                    //    PrefabUtility.SaveAsPrefabAsset(pagePrefab,
-                    //        "Assets/AutoUI/Resources/Prefabs/Pages/" + pageName + ".prefab");
-                    //    DestroyImmediate(pagePrefab);
-
-                    //    AssetDatabase.Refresh();
-                    //};
-                    //assemblyBuilder.Build();
-
+                    // 设置编译后回调中要执行的函数标志
+                    PlayerPrefs.SetString("PageName", pageName);
+                    Debug.Log("正在编译脚本,请稍等……");
                 }
-                if (GUILayout.Button("2.挂载组件"))
-                {
-                    if (!FileNameRegCheck(pageName)) return;
-                    // 将创建的新类挂载到复制的新资产上
-                    // 加载创建的新page预制体
-                    var pagePrefab = PrefabUtility.InstantiatePrefab(
-                        Resources.Load("Prefabs/Pages/" + pageName)) as GameObject;
+                //if (GUILayout.Button("2.挂载组件"))
+                //{
+                //    if (!FileNameRegCheck(pageName)) return;
+                //    // 将创建的新类挂载到复制的新资产上
+                //    // 加载创建的新page预制体
+                //    var pagePrefab = PrefabUtility.InstantiatePrefab(
+                //        Resources.Load("Prefabs/Pages/" + pageName)) as GameObject;
 
-                    // 添加组件
-                    if (!pagePrefab.GetComponent(System.Reflection.Assembly.Load("Assembly-CSharp").GetType(pageName)))
-                        pagePrefab.AddComponent(System.Reflection.Assembly.Load("Assembly-CSharp").GetType(pageName));
-                    // 保存修改
-                    PrefabUtility.SaveAsPrefabAsset(pagePrefab,
-                        "Assets/AutoUI/Resources/Prefabs/Pages/" + pageName + ".prefab");
-                    AssetDatabase.Refresh();
-                    DestroyImmediate(pagePrefab);
-                    Debug.Log("挂载完成");
-                }
+                //    // 添加组件
+                //    if (!pagePrefab.GetComponent(System.Reflection.Assembly.Load("Assembly-CSharp").GetType(pageName)))
+                //        pagePrefab.AddComponent(System.Reflection.Assembly.Load("Assembly-CSharp").GetType(pageName));
+                //    // 保存修改
+                //    PrefabUtility.SaveAsPrefabAsset(pagePrefab,
+                //        "Assets/AutoUI/Resources/Prefabs/Pages/" + pageName + ".prefab");
+                //    AssetDatabase.Refresh();
+                //    DestroyImmediate(pagePrefab);
+                //    Debug.Log("挂载完成");
+                //}
                 GUILayout.EndHorizontal();
 
                 GUILayout.BeginHorizontal();
@@ -327,7 +310,7 @@ public class ##ClassName## : PanelBase
                             pageName = pageNameNew;
 
                             // 修改配置文件信息
-                            // 从SkinDict.json中读取配置文件
+                            #region 从SkinDict.json中读取配置文件
                             var skinDict = new Dictionary<string, string>();
                             string skinDictStr = Resources.Load<TextAsset>("Config/SkinDict").text;
                             JsonData data = JsonMapper.ToObject(skinDictStr);
@@ -336,14 +319,25 @@ public class ##ClassName## : PanelBase
                             {
                                 skinDict.Add(data[i][0].ToString(), data[i][1].ToString());
                             }
-                            if (!skinDict.ContainsKey(pageNameChange))
+                            #endregion
+                            #region 输入合法检测
+                    if (!skinDict.ContainsKey(pageNameChange))
                             {
                                 Debug.LogWarning("【页面不存在，请重新选择页面！】");
                                 return;
                             }
+                            if (skinDict.ContainsKey(pageNameNew))
+                            {
+                                Debug.LogWarning("【新页面名已存在，请输入不同的页面名！】");
+                                return;
+                            }
+                    #endregion
+                            #region 修改配置文件
                             skinDict.Remove(pageNameChange);
                             skinDict.Add(pageNameNew, "Prefabs/Pages/" + pageNameNew);
-                            List<GlobalVar.PagesPathDict> pagePathDictList = new List<GlobalVar.PagesPathDict>();
+                            #endregion
+                            #region 写回配置文件
+                    List<GlobalVar.PagesPathDict> pagePathDictList = new List<GlobalVar.PagesPathDict>();
                             foreach (var item in skinDict)
                             {
                                 var pagePathDict = new GlobalVar.PagesPathDict();
@@ -353,30 +347,14 @@ public class ##ClassName## : PanelBase
                             }
                             string newSkinDict = JsonMapper.ToJson(pagePathDictList);
                             File.WriteAllText(Application.dataPath + "/AutoUI/Resources/Config/SkinDict.json", newSkinDict);
+                            #endregion
                             Debug.Log("页面配置文件写入完成！" + Application.dataPath + "Assets/AutoUI/Resources/Config/SkinDict.json");
                             AssetDatabase.Refresh();
-
 
                             // 修改预制体名
                             AssetDatabase.RenameAsset(
                                 "Assets/AutoUI/Resources/Prefabs/Pages/" + pageNameChange + ".prefab",
                                 pageNameNew + ".prefab");
-                            AssetDatabase.Refresh();
-
-                            // 删除旧的组件
-                            // 加载创建的新page预制体
-                            var pagePrefab = PrefabUtility.InstantiatePrefab(
-                                Resources.Load("Prefabs/Pages/" + pageNameNew)) as GameObject;
-
-                            // 删除组件
-                            if (pagePrefab.GetComponent(System.Reflection.Assembly.Load("Assembly-CSharp").GetType(pageNameChange)))
-                                DestroyImmediate(pagePrefab.GetComponent(System.Reflection.Assembly.Load("Assembly-CSharp").GetType(pageNameChange)));
-                            // 保存修改
-                            PrefabUtility.SaveAsPrefabAsset(pagePrefab,
-                                "Assets/AutoUI/Resources/Prefabs/Pages/" + pageNameNew + ".prefab");
-                            AssetDatabase.Refresh();
-                            DestroyImmediate(pagePrefab);
-
                             Debug.Log("页面预制体修改完成！" + "Assets/AutoUI/Resources/Prefabs/Pages/" + pageNameNew + ".prefab");
                             AssetDatabase.Refresh();
 
@@ -384,19 +362,15 @@ public class ##ClassName## : PanelBase
                             string pageClassOld = File.ReadAllText(Application.dataPath + "/AutoUI/Scripts/PanelScript/" + pageNameChange + ".cs");
                             string pageClassNew = pageClassOld.Replace("public class " + pageNameChange, "public class " + pageNameNew);
                             File.WriteAllText(Application.dataPath + "/AutoUI/Scripts/PanelScript/" + pageNameChange + ".cs", pageClassNew);
-                            File.Move(Application.dataPath + "/AutoUI/Scripts/PanelScript/" + pageNameChange + ".cs",
-                                Application.dataPath + "/AutoUI/Scripts/PanelScript/" + pageNameNew + ".cs");
+                            AssetDatabase.RenameAsset("Assets/AutoUI/Scripts/PanelScript/" + pageNameChange + ".cs",
+                                pageNameNew + ".cs");
                             Debug.Log("页面类修改完成！" + Application.dataPath + "/AutoUI/Scripts/PanelScript/" + pageNameNew + ".cs");
-
-                            AssetDatabase.Refresh();
-
-
                             pageNameChange = "";
-                            Debug.Log("请点击 【挂载组件】 按钮，重新挂载新的" + pageNameNew + "组件。");
+                            AssetDatabase.Refresh();
                         }
                     GUILayout.EndVertical();
                 GUILayout.EndHorizontal();
-                GUILayout.Label("注意：修改名字后，需要重新挂载组件，组件上需要赋值的属性需重新赋值。", EditorStyles.helpBox);
+                GUILayout.Label("☛使用说明：点击Page滚动栏里的page选中要改名的page，输入新名字，点击修改Page名。", EditorStyles.helpBox);
                 GUILayout.EndArea();
                 #endregion
 
@@ -421,6 +395,50 @@ public class ##ClassName## : PanelBase
             private void CompilationPipeline_assemblyCompilationFinished(string arg1, UnityEditor.Compilation.CompilerMessage[] arg2)
             {
                 Debug.Log(arg1);
+            }
+            
+            // 删除组件**
+            private void DeleteComponent()
+            {
+                // 加载创建的新page预制体
+                var pagePrefab = PrefabUtility.InstantiatePrefab(
+                    Resources.Load("Prefabs/Pages/" + pageNameNew)) as GameObject;
+
+                // 删除组件
+                if (pagePrefab.GetComponent(System.Reflection.Assembly.Load("Assembly-CSharp").GetType(pageNameChange)))
+                    DestroyImmediate(pagePrefab.GetComponent(System.Reflection.Assembly.Load("Assembly-CSharp").GetType(pageNameChange)));
+                // 保存修改
+                PrefabUtility.SaveAsPrefabAsset(pagePrefab,
+                    "Assets/AutoUI/Resources/Prefabs/Pages/" + pageNameNew + ".prefab");
+                AssetDatabase.Refresh();
+                DestroyImmediate(pagePrefab);
+            }
+
+
+            // 挂载组件
+            [UnityEditor.Callbacks.DidReloadScripts]
+            public static void AllScriptReloaded()
+            {
+                MountCom();
+            }
+            public static void MountCom()
+            {
+                if (PlayerPrefs.GetInt("StartMountCom") > 0)
+                {
+                    PlayerPrefs.SetInt("StartMountCom", 0);
+                    Debug.Log("脚本编译完成，开始挂载脚本。");
+                    var pagePrefab = PrefabUtility.InstantiatePrefab(
+                        Resources.Load("Prefabs/Pages/" + PlayerPrefs.GetString("PageName"))) as GameObject;
+                    // 添加组件
+                    if (!pagePrefab.GetComponent(System.Reflection.Assembly.Load("Assembly-CSharp").GetType(PlayerPrefs.GetString("PageName"))))
+                       pagePrefab.AddComponent(System.Reflection.Assembly.Load("Assembly-CSharp").GetType(PlayerPrefs.GetString("PageName")));
+                    // 保存修改
+                    PrefabUtility.SaveAsPrefabAsset(pagePrefab,
+                        "Assets/AutoUI/Resources/Prefabs/Pages/" + PlayerPrefs.GetString("PageName") + ".prefab");
+                    AssetDatabase.Refresh();
+                    DestroyImmediate(pagePrefab);
+                    Debug.Log("挂载完成，" + PlayerPrefs.GetString("PageName") + "创建完毕！");
+                }
             }
         }
     }

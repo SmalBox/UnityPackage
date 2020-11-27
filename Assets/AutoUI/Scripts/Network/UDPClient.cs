@@ -70,6 +70,11 @@ public class UDPClient : MonoBehaviour
         hardwareServerIPEnd = new IPEndPoint(IPAddress.Parse(hardwareServerIP), System.Convert.ToInt32(hardwareServerPort));
         // 初始化客户端socket
         clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+        
+        uint IOC_IN = 0x80000000;
+        uint IOC_VENDOR = 0x18000000;
+        uint SIO_UDP_CONNRESET = IOC_IN | IOC_VENDOR | 12;
+        clientSocket.IOControl((int)SIO_UDP_CONNRESET, new byte[] { Convert.ToByte(false)}, null);
 
         // 发送消息给硬件服务端，让硬件服务端知道我的IP和端口
         Send("InitMsg");
