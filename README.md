@@ -24,6 +24,9 @@
          // 返回 上一页面
          UIManager.instance.ReturnPanel();
          ```
+   - V0.027更新内容：
+      - 修复AutoUI页面管理器的 修改page名 功能 中 修改的页面的差错控制。
+      - 修复ReturnPanel中 返回任意级别菜单、返回跳转 中跳转到本层的判断。
    - V0.026更新内容：
       - 添加AutoUI页面管理器的 修改page名 功能。
    - V0.025更新内容：
