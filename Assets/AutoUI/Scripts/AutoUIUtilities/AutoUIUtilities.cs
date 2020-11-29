@@ -2,6 +2,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
+using CsvHelper;
+using System.Globalization;
+using System.Text;
+using System.Runtime.InteropServices.WindowsRuntime;
 
 namespace SmalBox.AutoUI
 {
@@ -29,5 +33,71 @@ namespace SmalBox.AutoUI
             }
             return null;
         }
+
+        #region 解析CSV文件方法（引用CSVHelper.dll）
+        /// <summary>
+        /// 解析原始数据，返回指定行列的数据
+        /// </summary>
+        /// <param name="path">相对StreamingAssets的路径以斜杠开头</param>
+        /// <param name="row">指定行</param>
+        /// <param name="column">指定列</param>
+        /// <returns></returns>
+        public static string GetCSVInfo(string path, int row, int column)
+        {
+            using (var reader = new StreamReader(Application.streamingAssetsPath + path, Encoding.GetEncoding("GBK")))
+            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            {
+                csv.Configuration.HasHeaderRecord = false;
+                csv.Read();
+                for (int i = 0; i < row - 1; i++)
+                {
+                    if (!csv.Read())
+                    {
+                        Debug.LogWarning("获取csv文件数据越界");
+                        return null;
+                    }
+                }
+                var columnCount = csv.Context.Record.Length;
+                if (column - 1 < 0 || column > columnCount ||
+                    row - 1 < 0)
+                {
+                    Debug.LogWarning("获取csv文件数据越界");
+                    return null;
+                }
+                var records = csv.GetField(column - 1);
+                return records;
+            }
+        }
+        /// <summary>
+        /// 读取csv文件到List表中。
+        /// </summary>
+        /// <param name="path">相对StreamingAssets的路径以斜杠开头</param>
+        /// <param name="csvTable">List二维表对象，读取后将赋值给此二位列表</param>
+        /// <param name="openLog">是否在读取时打开log输出，默认为：false</param>
+        public static void GetCSVInfoToList(string path, out List<List<string>> csvTable, bool openLog = false)
+        {
+            csvTable = new List<List<string>>();
+            // 读取csv文件存入csvTable中
+            using (var reader = new StreamReader(Application.streamingAssetsPath + path, Encoding.GetEncoding("GBK")))
+            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            {
+                csv.Configuration.HasHeaderRecord = false;
+                int index = 0;
+                while (csv.Read())
+                {
+                    List<string> tempList = new List<string>();
+                    var columnCount = csv.Context.Record.Length;
+                    for (int i = 0; i < columnCount; i++)
+                    {
+                        tempList.Add(csv.GetField<string>(i));
+                        if (openLog)
+                            Debug.Log("行：" + index + ", 列：" + i + ", 数据：" + csv.GetField<string>(i));
+                    }
+                    csvTable.Add(tempList);
+                    index++;
+                }
+            }
+        }
+        #endregion
     }
 }

@@ -20,6 +20,11 @@ public class SceneManage : MonoBehaviour
     {
         // 打开待机页
         UIManager.instance.OpenPanel("StandbyPage");
+
+        //Debug.Log(AutoUIUtilities.GetCSVInfo("/Config/Test.csv", 3, 3));
+        List<List<string>> testCSV;
+        AutoUIUtilities.GetCSVInfoToList("/Config/Test.csv", out testCSV);
+        Debug.Log(string.Format("Test.csv 中有{0}行，有{1}列", testCSV.Count, testCSV[0].Count));
     }
     private void Update()
     {

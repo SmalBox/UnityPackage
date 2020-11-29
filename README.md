@@ -3,10 +3,9 @@
 ## 简介
    - **AutoUI框架**来组织**页面**切换的通用逻辑。
    - 只需定制每个**页面**的业务逻辑内容，将页面的切换交给框架来处理。
-   - *当前版本:* **AutoUI-V0.028**
+   - *当前版本:* **AutoUI-V0.029**
       - 更新内容：
-         - 优化创建、修改Page流程，将挂载流程自动化，只需点击创建、修改即可自动完成包括挂载的所有流程。
-         - 添加UDPServer脚本组件
+         - 添加实用工具 AutoUIUtilities 读取CSV（Comma Separated Value 逗号分隔符文件）基本读取功能。
    - *Author:* [SmalBox](https://smalbox.top),*GitHub:* [GitHub/SmalBox](https://github.com/smalbox)
 
 ## 功能
@@ -182,3 +181,36 @@
          - 配置文件以 ##属性名##:属性值 的方式配置。例如：
             - ##Time##:10
             - 表示 Time 这个属性值是 1
+      - **读取CSV文件**
+         ``` c#
+         // 示例：
+
+         // 获取Test.csv中1行2列的数据
+         string csvData = AutoUIUtilities.GetCSVInfo("/Config/Test.csv", 1, 2);
+
+         // 获取Test.csv中所有的数据，存储到List二维表中
+         List<List<string>> testCSVTable;
+         AutoUIUtilities.GetCSVInfoToList("/Config/Test.csv", out testCSVTable);
+
+
+         // 方法原型:
+
+         /// <summary>
+         /// 解析原始数据，返回指定行列的数据
+         /// </summary>
+         /// <param name="path">相对StreamingAssets的路径以斜杠开头</param>
+         /// <param name="row">指定行</param>
+         /// <param name="column">指定列</param>
+         /// <returns></returns>
+         public static string GetCSVInfo(string path, int row, int column)
+
+         /// <summary>
+         /// 解析原始数据，返回指定行列的数据
+         /// </summary>
+         /// <param name="path">相对StreamingAssets的路径以斜杠开头</param>
+         /// <param name="row">指定行</param>
+         /// <param name="column">指定列</param>
+         /// <returns></returns>
+         public static string GetCSVInfo(string path, int row, int column)
+         ```
+         - *注：本解析CSV文件使用的是[CSVHelper](https://joshclose.github.io/CsvHelper/)解析库，[CSVHelper GitHub](https://github.com/JoshClose/CsvHelper)*。对应的库文件在 Assets/Plugins/CSVHelper。使用VisuaStudio的NuGet工具可以安装此库（库官方给出的方法）。
