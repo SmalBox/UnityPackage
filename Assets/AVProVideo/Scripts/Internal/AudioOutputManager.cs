@@ -3,11 +3,14 @@ using UnityEngine;
 using System;
 
 //-----------------------------------------------------------------------------
-// Copyright 2015-2017 RenderHeads Ltd.  All rights reserverd.
+// Copyright 2015-2020 RenderHeads Ltd.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 namespace RenderHeads.Media.AVProVideo
 {
+	/// <summary>
+	/// A singleton to handle multiple instances of the AudioOutput component
+	/// </summary>
 	public class AudioOutputManager
 	{
 		private static AudioOutputManager _instance = null;
@@ -48,7 +51,7 @@ namespace RenderHeads.Media.AVProVideo
 			}
 
 			//total samples requested should be multiple of channels
-#if UNITY_5 || UNITY_5_4_OR_NEWER
+#if (UNITY_5 && !UNITY_5_0) || UNITY_5_4_OR_NEWER
 			Debug.Assert(data.Length % totalChannels == 0);
 #endif
 

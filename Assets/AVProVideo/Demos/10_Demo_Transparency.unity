@@ -87,7 +87,6 @@ GameObject:
   m_Component:
   - 4: {fileID: 18}
   - 20: {fileID: 19}
-  - 92: {fileID: 33}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -106,11 +105,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f6d1977a52888584496b1acc7e998011, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _offset: {x: 0, y: 0}
-  _scale: {x: 1, y: 1}
-  _mesh: {fileID: 24}
   _media: {fileID: 332789657}
   _defaultTexture: {fileID: 0}
+  _mesh: {fileID: 24}
+  _texturePropertyName: _MainTex
+  _offset: {x: 0, y: 0}
+  _scale: {x: 1, y: 1}
 --- !u!4 &17
 Transform:
   m_ObjectHideFlags: 0
@@ -205,13 +205,6 @@ MeshFilter:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 10}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
---- !u!92 &33
-Behaviour:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 11}
-  m_Enabled: 1
 --- !u!196 &44
 NavMeshSettings:
   m_ObjectHideFlags: 0
@@ -256,7 +249,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0f17cdc186456a4469a139a104d2ca72, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Material: {fileID: 2100000, guid: 609c1db9ea02a5342bc549f4012aa81e, type: 2}
+  m_Material: {fileID: 1069711187}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   _mediaPlayer: {fileID: 332789657}
   m_UVRect:
@@ -266,8 +259,9 @@ MonoBehaviour:
     width: 1
     height: 1
   _setNativeSize: 0
-  _keepAspectRatio: 1
+  _scaleMode: 2
   _noDefaultDisplay: 0
+  _displayInEditor: 1
   _defaultTexture: {fileID: 0}
 --- !u!222 &262508476
 CanvasRenderer:
@@ -325,52 +319,125 @@ MonoBehaviour:
   m_AutoStart: 1
   m_Loop: 1
   m_Volume: 1
+  m_Balance: 0
   m_Muted: 0
   m_PlaybackRate: 1
-  m_DebugGui: 1
+  m_Resample: 0
+  m_ResampleMode: 0
+  m_ResampleBufferSize: 5
   m_Persistent: 0
+  m_videoMapping: 0
   m_StereoPacking: 0
   m_AlphaPacking: 2
   m_DisplayDebugStereoColorTint: 0
   m_FilterMode: 1
   m_WrapMode: 1
   m_AnisoLevel: 0
+  m_LoadSubtitles: 0
+  m_SubtitleLocation: 2
+  m_SubtitlePath: 
+  m_AudioHeadTransform: {fileID: 0}
+  m_AudioFocusEnabled: 0
+  m_AudioFocusTransform: {fileID: 0}
+  m_AudioFocusWidthDegrees: 90
+  m_AudioFocusOffLevelDB: 0
   m_events:
     m_PersistentCalls:
       m_Calls: []
     m_TypeName: RenderHeads.Media.AVProVideo.MediaPlayerEvent, Assembly-CSharp, Version=0.0.0.0,
       Culture=neutral, PublicKeyToken=null
+  m_eventMask: -1
+  m_forceFileFormat: 0
+  _pauseMediaOnAppPause: 1
+  _playMediaOnAppUnpause: 1
+  m_manuallySetAudioSourceProperties: 0
   _optionsWindows:
     overridePath: 0
     pathLocation: 2
     path: 
-    forceDirectShowApi: 0
+    videoApi: 0
+    useHardwareDecoding: 1
+    useUnityAudio: 0
+    forceAudioResample: 1
+    useTextureMips: 0
+    hintAlphaChannel: 0
+    useLowLatency: 0
     forceAudioOutputDeviceName: 
+    preferredFilters: []
+    enableAudio360: 0
+    audio360ChannelMode: 0
   _optionsMacOSX:
     overridePath: 0
     pathLocation: 2
     path: 
+    audioMode: 0
+    httpHeaders: []
+    httpHeaderJson: 
+    keyServerURLOverride: 
+    keyServerAuthToken: 
+    base64EncodedKeyBlob: 
   _optionsIOS:
     overridePath: 0
     pathLocation: 2
     path: 
+    audioMode: 0
+    httpHeaders: []
+    httpHeaderJson: 
+    keyServerURLOverride: 
+    keyServerAuthToken: 
+    base64EncodedKeyBlob: 
+    useYpCbCr420Textures: 1
+    resumePlaybackOnAudioSessionRouteChange: 0
   _optionsTVOS:
     overridePath: 0
     pathLocation: 2
     path: 
+    audioMode: 0
+    httpHeaders: []
+    httpHeaderJson: 
+    keyServerURLOverride: 
+    keyServerAuthToken: 
+    base64EncodedKeyBlob: 
+    useYpCbCr420Textures: 1
+    resumePlaybackOnAudioSessionRouteChange: 0
   _optionsAndroid:
     overridePath: 0
     pathLocation: 2
     path: 
+    videoApi: 2
+    useFastOesPath: 0
+    showPosterFrame: 0
+    enableAudio360: 0
+    audio360ChannelMode: 0
+    preferSoftwareDecoder: 0
+    httpHeaders: []
+    httpHeaderJson: 
+    fileOffset: 0
   _optionsWindowsPhone:
     overridePath: 0
     pathLocation: 2
     path: 
+    useHardwareDecoding: 1
+    useUnityAudio: 0
+    forceAudioResample: 1
+    useTextureMips: 0
+    useLowLatency: 0
   _optionsWindowsUWP:
     overridePath: 0
     pathLocation: 2
     path: 
+    useHardwareDecoding: 1
+    useUnityAudio: 0
+    forceAudioResample: 1
+    useTextureMips: 0
+    useLowLatency: 0
   _optionsWebGL:
+    overridePath: 0
+    pathLocation: 2
+    path: 
+    externalLibrary: 0
+    useTextureMips: 0
+  _optionsPS4:
     overridePath: 0
     pathLocation: 2
     path: 
@@ -415,11 +482,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f6d1977a52888584496b1acc7e998011, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _offset: {x: 0, y: 0}
-  _scale: {x: 1, y: 1}
-  _mesh: {fileID: 616336218}
   _media: {fileID: 768873723}
   _defaultTexture: {fileID: 0}
+  _mesh: {fileID: 616336218}
+  _texturePropertyName: _MainTex
+  _offset: {x: 0, y: 0}
+  _scale: {x: 1, y: 1}
 --- !u!23 &616336218
 Renderer:
   m_ObjectHideFlags: 0
@@ -492,52 +560,125 @@ MonoBehaviour:
   m_AutoStart: 1
   m_Loop: 1
   m_Volume: 1
+  m_Balance: 0
   m_Muted: 0
   m_PlaybackRate: 1
-  m_DebugGui: 0
+  m_Resample: 0
+  m_ResampleMode: 0
+  m_ResampleBufferSize: 5
   m_Persistent: 0
+  m_videoMapping: 0
   m_StereoPacking: 0
   m_AlphaPacking: 1
   m_DisplayDebugStereoColorTint: 0
   m_FilterMode: 1
   m_WrapMode: 1
   m_AnisoLevel: 0
+  m_LoadSubtitles: 0
+  m_SubtitleLocation: 2
+  m_SubtitlePath: 
+  m_AudioHeadTransform: {fileID: 0}
+  m_AudioFocusEnabled: 0
+  m_AudioFocusTransform: {fileID: 0}
+  m_AudioFocusWidthDegrees: 90
+  m_AudioFocusOffLevelDB: 0
   m_events:
     m_PersistentCalls:
       m_Calls: []
     m_TypeName: RenderHeads.Media.AVProVideo.MediaPlayerEvent, Assembly-CSharp, Version=0.0.0.0,
       Culture=neutral, PublicKeyToken=null
+  m_eventMask: -1
+  m_forceFileFormat: 0
+  _pauseMediaOnAppPause: 1
+  _playMediaOnAppUnpause: 1
+  m_manuallySetAudioSourceProperties: 0
   _optionsWindows:
     overridePath: 0
     pathLocation: 2
     path: 
-    forceDirectShowApi: 0
+    videoApi: 0
+    useHardwareDecoding: 1
+    useUnityAudio: 0
+    forceAudioResample: 1
+    useTextureMips: 0
+    hintAlphaChannel: 0
+    useLowLatency: 0
     forceAudioOutputDeviceName: 
+    preferredFilters: []
+    enableAudio360: 0
+    audio360ChannelMode: 0
   _optionsMacOSX:
     overridePath: 0
     pathLocation: 2
     path: 
+    audioMode: 0
+    httpHeaders: []
+    httpHeaderJson: 
+    keyServerURLOverride: 
+    keyServerAuthToken: 
+    base64EncodedKeyBlob: 
   _optionsIOS:
     overridePath: 0
     pathLocation: 2
     path: 
+    audioMode: 0
+    httpHeaders: []
+    httpHeaderJson: 
+    keyServerURLOverride: 
+    keyServerAuthToken: 
+    base64EncodedKeyBlob: 
+    useYpCbCr420Textures: 1
+    resumePlaybackOnAudioSessionRouteChange: 0
   _optionsTVOS:
     overridePath: 0
     pathLocation: 2
     path: 
+    audioMode: 0
+    httpHeaders: []
+    httpHeaderJson: 
+    keyServerURLOverride: 
+    keyServerAuthToken: 
+    base64EncodedKeyBlob: 
+    useYpCbCr420Textures: 1
+    resumePlaybackOnAudioSessionRouteChange: 0
   _optionsAndroid:
     overridePath: 0
     pathLocation: 2
     path: 
+    videoApi: 2
+    useFastOesPath: 0
+    showPosterFrame: 0
+    enableAudio360: 0
+    audio360ChannelMode: 0
+    preferSoftwareDecoder: 0
+    httpHeaders: []
+    httpHeaderJson: 
+    fileOffset: 0
   _optionsWindowsPhone:
     overridePath: 0
     pathLocation: 2
     path: 
+    useHardwareDecoding: 1
+    useUnityAudio: 0
+    forceAudioResample: 1
+    useTextureMips: 0
+    useLowLatency: 0
   _optionsWindowsUWP:
     overridePath: 0
     pathLocation: 2
     path: 
+    useHardwareDecoding: 1
+    useUnityAudio: 0
+    forceAudioResample: 1
+    useTextureMips: 0
+    useLowLatency: 0
   _optionsWebGL:
+    overridePath: 0
+    pathLocation: 2
+    path: 
+    externalLibrary: 0
+    useTextureMips: 0
+  _optionsPS4:
     overridePath: 0
     pathLocation: 2
     path: 
@@ -804,8 +945,9 @@ MonoBehaviour:
   _scaleMode: 2
   _color: {r: 1, g: 1, b: 1, a: 1}
   _alphaBlend: 0
-  _fullScreen: 1
+  _useDepth: 0
   _depth: 0
+  _fullScreen: 1
   _x: 0
   _y: 0
   _width: 1
@@ -822,6 +964,87 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 6
+--- !u!21 &1069711187
+Material:
+  serializedVersion: 3
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_Name: UI-TransparentVideo
+  m_Shader: {fileID: 4800000, guid: f32079bbb2560394abb63e40e1d53da7, type: 3}
+  m_ShaderKeywords:
+  - ALPHAPACK_LEFT_RIGHT
+  m_CustomRenderQueue: -1
+  m_SavedProperties:
+    serializedVersion: 2
+    m_TexEnvs:
+      data:
+        first:
+          name: _MainTex
+        second:
+          m_Texture: {fileID: 0}
+          m_Scale: {x: 1, y: 1}
+          m_Offset: {x: 0, y: 0}
+      data:
+        first:
+          name: _ChromaTex
+        second:
+          m_Texture: {fileID: 0}
+          m_Scale: {x: 1, y: 1}
+          m_Offset: {x: 0, y: 0}
+      data:
+        first:
+          name: _OverlayTex
+        second:
+          m_Texture: {fileID: 0}
+          m_Scale: {x: 1, y: -1}
+          m_Offset: {x: 0, y: 1}
+    m_Floats:
+      data:
+        first:
+          name: _Stencil
+        second: 0
+      data:
+        first:
+          name: _StencilReadMask
+        second: 255
+      data:
+        first:
+          name: _StencilWriteMask
+        second: 255
+      data:
+        first:
+          name: _StencilComp
+        second: 8
+      data:
+        first:
+          name: _StencilOp
+        second: 0
+      data:
+        first:
+          name: _ColorMask
+        second: 15
+      data:
+        first:
+          name: _ApplyGamma
+        second: 0
+      data:
+        first:
+          name: _UseYpCbCr
+        second: 0
+      data:
+        first:
+          name: AlphaPack
+        second: 0
+      data:
+        first:
+          name: _VertScale
+        second: 1
+    m_Colors:
+      data:
+        first:
+          name: _Color
+        second: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &1138740579
 GameObject:
   m_ObjectHideFlags: 0
@@ -917,8 +1140,9 @@ MonoBehaviour:
   _scaleMode: 2
   _color: {r: 1, g: 1, b: 1, a: 1}
   _alphaBlend: 0
-  _fullScreen: 0
+  _useDepth: 0
   _depth: 0
+  _fullScreen: 0
   _x: 0
   _y: 0
   _width: .5
@@ -976,11 +1200,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f6d1977a52888584496b1acc7e998011, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _offset: {x: 0, y: 0}
-  _scale: {x: 1, y: 1}
-  _mesh: {fileID: 1551834030}
   _media: {fileID: 332789657}
   _defaultTexture: {fileID: 0}
+  _mesh: {fileID: 1551834030}
+  _texturePropertyName: _MainTex
+  _offset: {x: 0, y: 0}
+  _scale: {x: 1, y: 1}
 --- !u!23 &1551834030
 Renderer:
   m_ObjectHideFlags: 0

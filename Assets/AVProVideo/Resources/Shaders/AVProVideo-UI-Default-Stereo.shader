@@ -1,5 +1,3 @@
-// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
 Shader "AVProVideo/UI/Stereo"
 {
 	Properties
@@ -17,6 +15,7 @@ Shader "AVProVideo/UI/Stereo"
 		_ColorMask ("Color Mask", Float) = 15
 
 		[KeywordEnum(None, Top_Bottom, Left_Right)] Stereo("Stereo Mode", Float) = 0
+		[KeywordEnum(None, Left, Right)] ForceEye ("Force Eye Mode", Float) = 0
 		[Toggle(STEREO_DEBUG)] _StereoDebug("Stereo Debug Tinting", Float) = 0
 		[Toggle(APPLY_GAMMA)] _ApplyGamma("Apply Gamma", Float) = 0
 		[Toggle(USE_YPCBCR)] _UseYpCbCr("Use YpCbCr", Float) = 0
@@ -56,12 +55,14 @@ Shader "AVProVideo/UI/Stereo"
 			#pragma vertex vert
 			#pragma fragment frag
 			#pragma multi_compile MONOSCOPIC STEREO_TOP_BOTTOM STEREO_LEFT_RIGHT
+			#pragma multi_compile FORCEEYE_NONE FORCEEYE_LEFT FORCEEYE_RIGHT
 
 			// TODO: Change XX_OFF to __ for Unity 5.0 and above
 			// this was just added for Unity 4.x compatibility as __ causes
 			// Android and iOS builds to fail the shader
 			#pragma multi_compile APPLY_GAMMA_OFF APPLY_GAMMA
-			#pragma multi_compile STEREO_DEBUG_OFF STEREO_DEBUG			
+			#pragma multi_compile STEREO_DEBUG_OFF STEREO_DEBUG
+			
 			#pragma multi_compile USE_YPCBCR_OFF USE_YPCBCR
 
 			#include "UnityCG.cginc"
@@ -85,7 +86,9 @@ Shader "AVProVideo/UI/Stereo"
 			uniform sampler2D _MainTex;
 #if USE_YPCBCR
 			uniform sampler2D _ChromaTex;
+			uniform float4x4 _YpCbCrTransform;
 #endif
+			uniform float4 _MainTex_ST;
 			uniform float4 _MainTex_TexelSize;
 			uniform float3 _cameraPosition;
 
@@ -93,7 +96,7 @@ Shader "AVProVideo/UI/Stereo"
 			{
 				v2f OUT;
 
-				OUT.vertex = UnityObjectToClipPos(IN.vertex);
+				OUT.vertex = XFormObjectToClip(IN.vertex);
 
 #ifdef UNITY_HALF_TEXEL_OFFSET
 				OUT.vertex.xy += (_ScreenParams.zw-1.0)*float2(-1,1);
@@ -102,7 +105,7 @@ Shader "AVProVideo/UI/Stereo"
 				OUT.texcoord.xy = IN.texcoord.xy;
 
 #if STEREO_TOP_BOTTOM | STEREO_LEFT_RIGHT
-				float4 scaleOffset = GetStereoScaleOffset(IsStereoEyeLeft(_cameraPosition, UNITY_MATRIX_V[0].xyz));
+				float4 scaleOffset = GetStereoScaleOffset(IsStereoEyeLeft(_cameraPosition, UNITY_MATRIX_V[0].xyz), _MainTex_ST.y < 0.0);
 				OUT.texcoord.xy *= scaleOffset.xy;
 				OUT.texcoord.xy += scaleOffset.zw;
 #endif
@@ -117,22 +120,14 @@ Shader "AVProVideo/UI/Stereo"
 
 			fixed4 frag(v2f IN) : SV_Target
 			{
+				fixed4 col;
 #if USE_YPCBCR
-	#if SHADER_API_METAL || SHADER_API_GLES || SHADER_API_GLES3
-				float3 ypcbcr = float3(tex2D(_MainTex, IN.texcoord).r, tex2D(_ChromaTex, IN.texcoord).rg);
-	#else
-				float3 ypcbcr = float3(tex2D(_MainTex, IN.texcoord).r, tex2D(_ChromaTex, IN.texcoord).ra);
-	#endif
-				half4 color = half4(Convert420YpCbCr8ToRGB(ypcbcr), 1.0);
+				col = SampleYpCbCr(_MainTex, _ChromaTex, IN.texcoord, _YpCbCrTransform);
 #else
-				half4 color = tex2D(_MainTex, IN.texcoord.xy);
+				col = SampleRGBA(_MainTex, IN.texcoord);
 #endif
-#if APPLY_GAMMA
-				color.rgb = GammaToLinear(color.rgb);
-#endif
-
-				color *= IN.color;
-				return color;
+				col *= IN.color;
+				return col;
 			}
 
 		ENDCG

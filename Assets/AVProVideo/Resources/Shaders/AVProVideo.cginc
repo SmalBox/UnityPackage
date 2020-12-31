@@ -1,9 +1,10 @@
-//-----------------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------------
 // Copyright 2015-2017 RenderHeads Ltd.  All rights reserverd.
 //-----------------------------------------------------------------------------
 
 #if defined (SHADERLAB_GLSL)
 	#define INLINE 
+	#define HALF float
 	#define HALF2 vec2
 	#define HALF3 vec3
 	#define HALF4 vec4
@@ -11,8 +12,10 @@
 	#define FLOAT3 vec3
 	#define FLOAT4 vec4
 	#define FLOAT3X3 mat3
+	#define FLOAT4X4 mat4
 #else
 	#define INLINE inline
+	#define HALF half
 	#define HALF2 half2
 	#define HALF3 half3
 	#define HALF4 half4
@@ -20,13 +23,39 @@
 	#define FLOAT3 float3
 	#define FLOAT4 float4
 	#define FLOAT3X3 float3x3
+	#define FLOAT4X4 float4x4
 #endif
+
+// Specify this so Unity doesn't automatically update our shaders.
+#define UNITY_SHADER_NO_UPGRADE 1
+
+// We use this method so that when Unity automatically updates the shader from the old
+// mul(UNITY_MATRIX_MVP.. to UnityObjectToClipPos that it only changes in one place.
+INLINE FLOAT4 XFormObjectToClip(FLOAT4 vertex)
+{
+#if defined(SHADERLAB_GLSL)
+	return gl_ModelViewProjectionMatrix * vertex;
+#else
+#if (UNITY_VERSION >= 560)
+	return UnityObjectToClipPos(vertex);
+#else
+	return mul(UNITY_MATRIX_MVP, vertex);
+#endif
+#endif
+}
 
 INLINE bool IsStereoEyeLeft(FLOAT3 worldNosePosition, FLOAT3 worldCameraRight)
 {
-#if defined(UNITY_SINGLE_PASS_STEREO)
+#if defined(FORCEEYE_LEFT)
+	return true;
+#elif defined(FORCEEYE_RIGHT)
+	return false;
+#elif defined(UNITY_SINGLE_PASS_STEREO) || defined (UNITY_STEREO_INSTANCING_ENABLED)
 	// Unity 5.4 has this new variable
 	return (unity_StereoEyeIndex == 0);
+#elif defined (UNITY_DECLARE_MULTIVIEW)
+	// OVR_multiview extension
+	return (UNITY_VIEWID == 0);
 #else
 
 //#if (UNITY_VERSION > 540) && defined(GOOGLEVR) && !defined(SHADERLAB_GLSL)
@@ -47,7 +76,7 @@ INLINE bool IsStereoEyeLeft(FLOAT3 worldNosePosition, FLOAT3 worldCameraRight)
 }
 
 #if defined(STEREO_TOP_BOTTOM) || defined(STEREO_LEFT_RIGHT)
-FLOAT4 GetStereoScaleOffset(bool isLeftEye)
+FLOAT4 GetStereoScaleOffset(bool isLeftEye, bool isYFlipped)
 {
 	FLOAT2 scale = FLOAT2(1.0, 1.0);
 	FLOAT2 offset = FLOAT2(0.0, 0.0);
@@ -63,11 +92,14 @@ FLOAT4 GetStereoScaleOffset(bool isLeftEye)
 		offset.y = 0.5;
 	}
 
-	// UNITY_UV_STARTS_AT_TOP is for directx
 #if !defined(SHADERLAB_GLSL) 
-#if !defined(UNITY_UV_STARTS_AT_TOP)
-	offset.y = 0.5 - offset.y;
-#endif
+//#if !defined(UNITY_UV_STARTS_AT_TOP)	// UNITY_UV_STARTS_AT_TOP is for directx
+	if (!isYFlipped)
+	{
+		// Currently this only runs for Android and Windows using DirectShow
+		offset.y = 0.5 - offset.y;
+	}
+//#endif
 #endif
 
 	// Left-Right 
@@ -108,6 +140,9 @@ INLINE FLOAT4 GetStereoDebugTint(bool isLeftEye)
 #if defined(UNITY_UV_STARTS_AT_TOP)
 	tint.b = 0.5;
 #endif
+/*#if defined(UNITY_SINGLE_PASS_STEREO) || defined(UNITY_STEREO_INSTANCING_ENABLED) || defined(UNITY_DECLARE_MULTIVIEW)
+	tint.b = 1.0;
+#endif*/
 
 	return tint;
 }
@@ -263,6 +298,9 @@ INLINE HALF3 LinearToGamma(HALF3 col)
 	return col;
 }
 
+// NOTE: This method is DEPRECATED as of 1.9.5.  Use ConvertYpCbCrToRGB() instead.
+// Only keeping this here so any custom shaders people have made don't break.
+// This method is broken and won't output accuratly (at least on iOS).
 INLINE FLOAT3 Convert420YpCbCr8ToRGB(FLOAT3 ypcbcr)
 {
 #if 1
@@ -287,5 +325,64 @@ INLINE FLOAT3 Convert420YpCbCr8ToRGB(FLOAT3 ypcbcr)
 	return m * (ypcbcr + o);
 #else
 	return mul(m, ypcbcr + o);
+#endif
+}
+
+INLINE FLOAT3 ConvertYpCbCrToRGB(FLOAT3 YpCbCr, FLOAT4X4 YpCbCrTransform)
+{
+#if defined(SHADERLAB_GLSL)
+	return FLOAT3X3(YpCbCrTransform) * (YpCbCr + YpCbCrTransform[3].xyz);
+#else
+	return mul((FLOAT3X3)YpCbCrTransform, YpCbCr + YpCbCrTransform[3].xyz);
+#endif
+}
+
+INLINE HALF4 SampleRGBA(sampler2D tex, FLOAT2 uv)
+{
+#if defined(SHADERLAB_GLSL)		// GLSL doesn't support tex2D, so just return for now
+	return HALF4(1.0, 1.0, 0.0, 1.0);
+#else	
+	HALF4 rgba = tex2D(tex, uv);
+#if defined(APPLY_GAMMA)
+	rgba.rgb = GammaToLinear(rgba.rgb);
+#endif
+	return rgba;
+#endif
+}
+
+INLINE HALF4 SampleYpCbCr(sampler2D luma, sampler2D chroma, FLOAT2 uv, FLOAT4X4 YpCbCrTransform)
+{
+#if defined(SHADERLAB_GLSL)		// GLSL doesn't support tex2D, so just return for now
+	return HALF4(1.0, 1.0, 0.0, 1.0);
+#else
+#if defined(SHADER_API_METAL) || defined(SHADER_API_GLES) || defined(SHADER_API_GLES3)
+	FLOAT3 YpCbCr = FLOAT3(tex2D(luma, uv).r, tex2D(chroma, uv).rg);
+#else
+	FLOAT3 YpCbCr = FLOAT3(tex2D(luma, uv).r, tex2D(chroma, uv).ra);
+#endif
+	HALF4 rgba = HALF4(ConvertYpCbCrToRGB(YpCbCr, YpCbCrTransform), 1.0);
+#if defined(APPLY_GAMMA)
+	rgba.rgb = GammaToLinear(rgba.rgb);
+#endif
+	return rgba;
+#endif
+}
+
+INLINE HALF SamplePackedAlpha(sampler2D tex, FLOAT2 uv)
+{
+#if defined(SHADERLAB_GLSL)	// GLSL doesn't support tex2D, so just return for now
+	return 0.5;
+#else
+	HALF alpha;
+#if defined(USE_YPCBCR)
+	alpha = (tex2D(tex, uv).r - 0.0625) * (255.0 / 219.0);
+#else
+	HALF3 rgb = tex2D(tex, uv).rgb;
+#if defined(APPLY_GAMMA)
+	rgb = GammaToLinear(rgb);
+#endif
+	alpha = (rgb.r + rgb.g + rgb.b) / 3.0;
+#endif
+	return alpha;
 #endif
 }

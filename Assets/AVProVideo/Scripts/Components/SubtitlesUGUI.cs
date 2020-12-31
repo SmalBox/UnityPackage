@@ -6,17 +6,17 @@ using UnityEngine;
 using UnityEngine.UI;
 
 //-----------------------------------------------------------------------------
-// Copyright 2015-2017 RenderHeads Ltd.  All rights reserverd.
+// Copyright 2015-2020 RenderHeads Ltd.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 namespace RenderHeads.Media.AVProVideo
 {
 	/// <summary>
-	/// Update uGUI Text element with subtitle text as it plays from the MediaPlayer
+	/// Update a standard uGUI Text element with subtitle text as it plays from the MediaPlayer
 	/// </summary>
 	[AddComponentMenu("AVPro Video/Subtitles uGUI", 201)]
 #if UNITY_HELPATTRIB
-	[HelpURL("http://renderheads.com/product/avpro-video/")]
+	[HelpURL("http://renderheads.com/products/avpro-video/")]
 #endif
 	public class SubtitlesUGUI : MonoBehaviour
 	{
@@ -45,10 +45,10 @@ namespace RenderHeads.Media.AVProVideo
 				_mediaPlayer = null;
 			}
 
-			_mediaPlayer = newPlayer;
-			if (_mediaPlayer != null)
+			if (newPlayer != null)
 			{
-				_mediaPlayer.Events.AddListener(OnMediaPlayerEvent);
+				newPlayer.Events.AddListener(OnMediaPlayerEvent);
+				_mediaPlayer = newPlayer;
 			}
 		}
 

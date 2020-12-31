@@ -3,22 +3,27 @@ using UnityEditor;
 using System.Collections.Generic;
 
 //-----------------------------------------------------------------------------
-// Copyright 2015-2017 RenderHeads Ltd.  All rights reserverd.
+// Copyright 2015-2020 RenderHeads Ltd.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 namespace RenderHeads.Media.AVProVideo.Editor
 {
+	/// <summary>
+	/// Editor for the ApplyToMesh component
+	/// </summary>
 	[CanEditMultipleObjects]
 	[CustomEditor(typeof(ApplyToMesh))]
 	public class ApplyToMeshEditor : UnityEditor.Editor
 	{
+		private static readonly GUIContent _guiTextTextureProperty = new GUIContent("Texture Property");
+
 		private SerializedProperty _propTextureOffset;
 		private SerializedProperty _propTextureScale;
 		private SerializedProperty _propMediaPlayer;
 		private SerializedProperty _propRenderer;
 		private SerializedProperty _propTexturePropertyName;
 		private SerializedProperty _propDefaultTexture;
-		private string[] _materialTextureProperties = new string[0];
+		private GUIContent[] _materialTextureProperties = new GUIContent[0];
 
 		void OnEnable()
 		{
@@ -38,6 +43,8 @@ namespace RenderHeads.Media.AVProVideo.Editor
 			{
 				return;
 			}
+
+			EditorGUI.BeginChangeCheck();
 
 			EditorGUILayout.PropertyField(_propMediaPlayer);
 			EditorGUILayout.PropertyField(_propDefaultTexture);
@@ -62,7 +69,7 @@ namespace RenderHeads.Media.AVProVideo.Editor
 					}
 				}
 
-				List<string> items = new List<string>(8);
+				List<GUIContent> items = new List<GUIContent>(16);
 				foreach (MaterialProperty matProp in matProps)
 				{
 					if (matProp.type == MaterialProperty.PropType.Texture)
@@ -71,16 +78,16 @@ namespace RenderHeads.Media.AVProVideo.Editor
 						{
 							texturePropertyIndex = items.Count;
 						}
-						items.Add(matProp.name);
+						items.Add(new GUIContent(matProp.name));
 					}
 				}
 				_materialTextureProperties = items.ToArray();
 			}
 
-			int newTexturePropertyIndex = EditorGUILayout.Popup("Texture Property", texturePropertyIndex, _materialTextureProperties);
-			if (newTexturePropertyIndex != texturePropertyIndex)
+			int newTexturePropertyIndex = EditorGUILayout.Popup(_guiTextTextureProperty, texturePropertyIndex, _materialTextureProperties);
+			if (newTexturePropertyIndex >= 0 && newTexturePropertyIndex < _materialTextureProperties.Length)
 			{
-				_propTexturePropertyName.stringValue = _materialTextureProperties[newTexturePropertyIndex];
+				_propTexturePropertyName.stringValue = _materialTextureProperties[newTexturePropertyIndex].text;
 			}
 
 			if (hasKeywords && _propTexturePropertyName.stringValue != "_MainTex")
@@ -92,6 +99,16 @@ namespace RenderHeads.Media.AVProVideo.Editor
 			EditorGUILayout.PropertyField(_propTextureScale);
 
 			serializedObject.ApplyModifiedProperties();
+
+			bool wasModified = EditorGUI.EndChangeCheck();
+
+			if (Application.isPlaying && wasModified)
+			{
+				foreach (Object obj in this.targets)
+				{
+					((ApplyToMesh)obj).ForceUpdate();
+				}
+			}
 		}
 	}
 }

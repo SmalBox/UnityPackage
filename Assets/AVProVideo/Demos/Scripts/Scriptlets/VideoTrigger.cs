@@ -1,6 +1,10 @@
 ﻿using UnityEngine;
 using RenderHeads.Media.AVProVideo;
 
+//-----------------------------------------------------------------------------
+// Copyright 2015-2020 RenderHeads Ltd.  All rights reserved.
+//-----------------------------------------------------------------------------
+
 namespace RenderHeads.Media.AVProVideo.Demos
 {
 	/// <summary>

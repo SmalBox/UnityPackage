@@ -2,8 +2,16 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+//-----------------------------------------------------------------------------
+// Copyright 2015-2020 RenderHeads Ltd.  All rights reserved.
+//-----------------------------------------------------------------------------
+
 namespace RenderHeads.Media.AVProVideo
 {
+	/// <summary>
+	/// Utility class to resample MediaPlayer video frames to allow for smoother playback
+	/// Keeps a buffer of frames with timestamps and presents them using its own clock
+	/// </summary>
 	public class Resampler
 	{
 		private class TimestampedRenderTexture
@@ -78,13 +86,22 @@ namespace RenderHeads.Media.AVProVideo
 		private const string ShaderPropAftertex = "_AfterTex";
 		private int _propAfterTex;
 		private int _propT;
+		private float _videoFrameRate;
 
 		public void OnVideoEvent(MediaPlayer mp, MediaPlayerEvent.EventType et, ErrorCode errorCode)
 		{
 			switch (et)
 			{
 				case MediaPlayerEvent.EventType.MetaDataReady:
-					_elapsedTimeSinceBase = _bufferSize / _mediaPlayer.Info.GetVideoFrameRate();
+					_videoFrameRate = mp.Info.GetVideoFrameRate();
+					_elapsedTimeSinceBase = 0f;
+					if (_videoFrameRate > 0f)
+					{
+						_elapsedTimeSinceBase = _bufferSize / _videoFrameRate;
+					}
+					break;
+				case MediaPlayerEvent.EventType.Closing:
+					Reset();
 					break;
 				default:
 					break;
@@ -95,28 +112,26 @@ namespace RenderHeads.Media.AVProVideo
 		{
 			_bufferSize = Mathf.Max(2, bufferSize);
 
-			if(player.Info != null)
-			{
-				_elapsedTimeSinceBase = _bufferSize / player.Info.GetVideoFrameRate();
-			}
-
 			player.Events.AddListener(OnVideoEvent);
-			
+
 			_mediaPlayer = player;
 
 			Shader blendShader = Shader.Find("AVProVideo/BlendFrames");
-
 			if (blendShader != null)
 			{
 				_blendMat = new Material(blendShader);
 				_propT = Shader.PropertyToID(ShaderPropT);
 				_propAfterTex = Shader.PropertyToID(ShaderPropAftertex);
 			}
+			else
+			{
+				Debug.LogError("[AVProVideo] Failed to find BlendFrames shader");
+			}
 
 			_resampleMode = resampleMode;
 			_name = name;
 
-			Debug.Log("Resampler " + _name + " started");
+			Debug.Log("[AVProVideo] Resampler " + _name + " started");
 		}
 
 		public Texture[] OutputTexture
@@ -142,9 +157,9 @@ namespace RenderHeads.Media.AVProVideo
 
 		private void ReleaseRenderTextures()
 		{
-			for(int i = 0; i < _buffer.Count; ++i)
+			for (int i = 0; i < _buffer.Count; ++i)
 			{
-				for (int j = 0; j < _buffer.Count; ++j)
+				for (int j = 0; j < _buffer[i].Length; ++j)
 				{
 					if (_buffer[i][j].texture != null)
 					{
@@ -155,7 +170,7 @@ namespace RenderHeads.Media.AVProVideo
 
 				if (_outputTexture != null && _outputTexture[i] != null)
 				{
-					RenderTexture.ReleaseTemporary(_outputTexture[i]);	
+					RenderTexture.ReleaseTemporary(_outputTexture[i]);
 				}
 			}
 
@@ -165,10 +180,11 @@ namespace RenderHeads.Media.AVProVideo
 		private void ConstructRenderTextures()
 		{
 			ReleaseRenderTextures();
+			_buffer.Clear();
 
 			_outputTexture = new RenderTexture[_mediaPlayer.TextureProducer.GetTextureCount()];
 
-			for(int i = 0; i < _mediaPlayer.TextureProducer.GetTextureCount(); ++i)
+			for (int i = 0; i < _mediaPlayer.TextureProducer.GetTextureCount(); ++i)
 			{
 				Texture tex = _mediaPlayer.TextureProducer.GetTexture(i);
 				_buffer.Add(new TimestampedRenderTexture[_bufferSize]);
@@ -179,19 +195,22 @@ namespace RenderHeads.Media.AVProVideo
 
 				for (int j = 0; j < _buffer[i].Length; ++j)
 				{
-					_buffer[i][j].texture = RenderTexture.GetTemporary(tex.width, tex.height);
+					_buffer[i][j].texture = RenderTexture.GetTemporary(tex.width, tex.height, 0);
 					_buffer[i][j].timestamp = 0;
 					_buffer[i][j].used = false;
 				}
 
-				_outputTexture[i] = RenderTexture.GetTemporary(tex.width, tex.height);
+				_outputTexture[i] = RenderTexture.GetTemporary(tex.width, tex.height, 0);
+				_outputTexture[i].filterMode = tex.filterMode;
+				_outputTexture[i].wrapMode = tex.wrapMode;
+				_outputTexture[i].anisoLevel = tex.anisoLevel;
+				// TODO: set up the mips level too?
 			}
-			
 		}
 
 		private bool CheckRenderTexturesValid()
 		{
-			for(int i = 0; i < _mediaPlayer.TextureProducer.GetTextureCount(); ++i)
+			for (int i = 0; i < _mediaPlayer.TextureProducer.GetTextureCount(); ++i)
 			{
 				Texture tex = _mediaPlayer.TextureProducer.GetTexture(i);
 				for (int j = 0; j < _buffer.Count; ++j)
@@ -212,9 +231,10 @@ namespace RenderHeads.Media.AVProVideo
 			return true;
 		}
 
+		//finds closest frame that occurs before given index
 		private int FindBeforeFrameIndex(int frameIdx)
 		{
-			if(frameIdx >= _buffer.Count)
+			if (frameIdx >= _buffer.Count)
 			{
 				return -1;
 			}
@@ -260,9 +280,9 @@ namespace RenderHeads.Media.AVProVideo
 			return foundFrame;
 		}
 
-		private int findClosestFrame(int frameIdx)
+		private int FindClosestFrame(int frameIdx)
 		{
-			if(frameIdx >= _buffer.Count)
+			if (frameIdx >= _buffer.Count)
 			{
 				return -1;
 			}
@@ -276,7 +296,7 @@ namespace RenderHeads.Media.AVProVideo
 				{
 					float elapsed = (_buffer[frameIdx][i].timestamp - _baseTimestamp) / 10000000f;
 					float dif = Mathf.Abs(_elapsedTimeSinceBase - elapsed);
-					if (smallestDif > dif)
+					if (dif < smallestDif)
 					{
 						foundPos = i;
 						smallestDif = dif;
@@ -287,34 +307,38 @@ namespace RenderHeads.Media.AVProVideo
 			return foundPos;
 		}
 
+		//point update selects closest frame and uses that as output
 		private void PointUpdate()
 		{
-			for(int i = 0; i < _buffer.Count; ++i)
+			for (int i = 0; i < _buffer.Count; ++i)
 			{
-				int frameIndex = findClosestFrame(i);
-
+				int frameIndex = FindClosestFrame(i);
 				if (frameIndex < 0)
 				{
 					continue;
 				}
 
+				_outputTexture[i].DiscardContents();
 				Graphics.Blit(_buffer[i][frameIndex].texture, _outputTexture[i]);
-				_currentDisplayedTimestamp = _buffer[i][frameIndex].timestamp;
+				TextureTimeStamp = _currentDisplayedTimestamp = _buffer[i][frameIndex].timestamp;
 			}
-			
+
 		}
 
+		//Updates currently displayed frame
 		private void SampleFrame(int frameIdx, int bufferIdx)
 		{
+			_outputTexture[bufferIdx].DiscardContents();
 			Graphics.Blit(_buffer[bufferIdx][frameIdx].texture, _outputTexture[bufferIdx]);
-			TextureTimeStamp = _buffer[bufferIdx][frameIdx].timestamp;
-			_currentDisplayedTimestamp = _buffer[bufferIdx][frameIdx].timestamp;
+			TextureTimeStamp = _currentDisplayedTimestamp = _buffer[bufferIdx][frameIdx].timestamp;
 		}
 
+		//Same as sample frame, but does a lerp of the two given frames and outputs that image instead
 		private void SampleFrames(int bufferIdx, int frameIdx1, int frameIdx2, float t)
 		{
 			_blendMat.SetFloat(_propT, t);
 			_blendMat.SetTexture(_propAfterTex, _buffer[bufferIdx][frameIdx2].texture);
+			_outputTexture[bufferIdx].DiscardContents();
 			Graphics.Blit(_buffer[bufferIdx][frameIdx1].texture, _outputTexture[bufferIdx], _blendMat);
 			TextureTimeStamp = (long)Mathf.Lerp(_buffer[bufferIdx][frameIdx1].timestamp, _buffer[bufferIdx][frameIdx2].timestamp, t);
 			_currentDisplayedTimestamp = _buffer[bufferIdx][frameIdx1].timestamp;
@@ -322,7 +346,7 @@ namespace RenderHeads.Media.AVProVideo
 
 		private void LinearUpdate()
 		{
-			for(int i = 0; i < _buffer.Count; ++i)
+			for (int i = 0; i < _buffer.Count; ++i)
 			{
 				//find closest frame
 				int frameIndex = FindBeforeFrameIndex(i);
@@ -354,7 +378,7 @@ namespace RenderHeads.Media.AVProVideo
 					//have a before and after frame, interpolate
 					else
 					{
-						
+
 						float range = nextElapsed - frameElapsed;
 						float t = (_elapsedTimeSinceBase - frameElapsed) / range;
 						SampleFrames(i, frameIndex, next, t);
@@ -366,7 +390,7 @@ namespace RenderHeads.Media.AVProVideo
 
 		private void InvalidateBuffer()
 		{
-			_elapsedTimeSinceBase = (_bufferSize / 2) / _mediaPlayer.Info.GetVideoFrameRate();
+			_elapsedTimeSinceBase = (_bufferSize / 2) / _videoFrameRate;
 
 			for (int i = 0; i < _buffer.Count; ++i)
 			{
@@ -379,9 +403,46 @@ namespace RenderHeads.Media.AVProVideo
 			_start = _end = 0;
 		}
 
+		private float GuessFrameRate()
+		{
+			int fpsCount = 0;
+			long fps = 0;
+			
+			for (int k = 0; k < _buffer[0].Length; k++)
+			{
+				if (_buffer[0][k].used)
+				{
+					// Find the pair with the smallest difference
+					long smallestDiff = long.MaxValue;
+					for (int j = k + 1; j < _buffer[0].Length; j++)
+					{
+						if (_buffer[0][j].used)
+						{
+							long diff = System.Math.Abs(_buffer[0][k].timestamp - _buffer[0][j].timestamp);
+							if (diff < smallestDiff)
+							{
+								smallestDiff = diff;
+							}
+						}
+					}
+
+					if (smallestDiff != long.MaxValue)
+					{
+						fps += smallestDiff;
+						fpsCount++;
+					}
+				}
+			}
+			if (fpsCount > 1)
+			{
+				fps /= fpsCount;
+			}
+			return 10000000f / (float)fps;
+		}
+
 		public void Update()
 		{
-			if(_mediaPlayer.TextureProducer == null)
+			if (_mediaPlayer.TextureProducer == null)
 			{
 				return;
 			}
@@ -389,7 +450,7 @@ namespace RenderHeads.Media.AVProVideo
 			//recreate textures if invalid
 			if (_mediaPlayer.TextureProducer == null || _mediaPlayer.TextureProducer.GetTexture() == null)
 			{
-				return;	
+				return;
 			}
 
 			if (!CheckRenderTexturesValid())
@@ -399,10 +460,11 @@ namespace RenderHeads.Media.AVProVideo
 
 			long currentTimestamp = _mediaPlayer.TextureProducer.GetTextureTimeStamp();
 
-			if(currentTimestamp != _lastTimeStamp)
+			//if frame has been updated, do a calculation to estimate dropped frames
+			if (currentTimestamp != _lastTimeStamp)
 			{
 				float dif = Mathf.Abs(currentTimestamp - _lastTimeStamp);
-				float frameLength = 10000000f * (1 / _mediaPlayer.Info.GetVideoFrameRate());
+				float frameLength = (10000000f / _videoFrameRate);
 				if (dif > frameLength * 1.1f && dif < frameLength * 3.1f)
 				{
 					_droppedFrames += (int)((dif - frameLength) / frameLength + 0.5);
@@ -424,6 +486,8 @@ namespace RenderHeads.Media.AVProVideo
 				}
 			}
 
+			bool bufferWasNotFull = (_start != _end) || (!_buffer[0][_end].used);
+
 			if (insertNewFrame)
 			{
 				//buffer empty, reset base timestamp to current
@@ -443,6 +507,7 @@ namespace RenderHeads.Media.AVProVideo
 					Texture currentTexture = _mediaPlayer.TextureProducer.GetTexture(i);
 
 					//store frame info
+					_buffer[i][_end].texture.DiscardContents();
 					Graphics.Blit(currentTexture, _buffer[i][_end].texture);
 					_buffer[i][_end].timestamp = timestamp;
 					_buffer[i][_end].used = true;
@@ -451,14 +516,24 @@ namespace RenderHeads.Media.AVProVideo
 				_end = (_end + 1) % _buffer[0].Length;
 			}
 
-			bool bufferNotFull = _start != _end || !_buffer[0][_end].used;
+			bool bufferNotFull = (_start != _end) || (!_buffer[0][_end].used);
 
 			if (bufferNotFull)
 			{
 				for (int i = 0; i < _buffer.Count; ++i)
 				{
+					_outputTexture[i].DiscardContents();
 					Graphics.Blit(_buffer[i][_start].texture, _outputTexture[i]);
 					_currentDisplayedTimestamp = _buffer[i][_start].timestamp;
+				}
+			}
+			else
+			{
+				// If we don't have a valid frame rate and the buffer is now full, guess the frame rate by looking at the buffered timestamps
+				if (bufferWasNotFull && _videoFrameRate <= 0f)
+				{
+					_videoFrameRate = GuessFrameRate();
+					_elapsedTimeSinceBase = (_bufferSize / 2) / _videoFrameRate;
 				}
 			}
 
@@ -478,8 +553,8 @@ namespace RenderHeads.Media.AVProVideo
 				//correct elapsed time if too far out
 				long ts = _buffer[0][(_start + _bufferSize / 2) % _bufferSize].timestamp - _baseTimestamp;
 				double dif = Mathf.Abs(((float)((double)_elapsedTimeSinceBase * 10000000) - ts));
-				double threshold = (_buffer[0].Length / 2) / _mediaPlayer.Info.GetVideoFrameRate() * 10000000;
-				
+				double threshold = (_buffer[0].Length / 2) / _videoFrameRate * 10000000;
+
 				if (dif > threshold)
 				{
 					_elapsedTimeSinceBase = ts / 10000000f;
@@ -500,7 +575,7 @@ namespace RenderHeads.Media.AVProVideo
 
 		public void UpdateTimestamp()
 		{
-			if(_lastDisplayedTimestamp != _currentDisplayedTimestamp)
+			if (_lastDisplayedTimestamp != _currentDisplayedTimestamp)
 			{
 				_lastDisplayedTimestamp = _currentDisplayedTimestamp;
 				_frameDisplayedTimer = 0;

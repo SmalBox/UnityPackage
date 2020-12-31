@@ -5,7 +5,7 @@
 using UnityEngine;
 
 //-----------------------------------------------------------------------------
-// Copyright 2015-2017 RenderHeads Ltd.  All rights reserverd.
+// Copyright 2015-2020 RenderHeads Ltd.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 namespace RenderHeads.Media.AVProVideo
@@ -17,7 +17,7 @@ namespace RenderHeads.Media.AVProVideo
 	/// </summary>
 	[AddComponentMenu("AVPro Video/Update Stereo Material", 400)]
 #if UNITY_HELPATTRIB
-	[HelpURL("http://renderheads.com/product/avpro-video/")]
+	[HelpURL("http://renderheads.com/products/avpro-video/")]
 #endif
 	public class UpdateStereoMaterial : MonoBehaviour
 	{
@@ -29,13 +29,26 @@ namespace RenderHeads.Media.AVProVideo
 		public UnityEngine.UI.Graphic _uGuiComponent;
 		public Material _material;
 
-		private int _cameraPositionId;
-		private int _viewMatrixId;
+		[SerializeField]
+		private StereoEye _forceEyeMode;
+
+		private static int _cameraPositionId;
+		private static int _viewMatrixId;
+		private StereoEye _setForceEyeMode = StereoEye.Both;
+		public StereoEye ForceEyeMode { get { return _forceEyeMode; } set { _forceEyeMode = value; } }
+
+		private Camera _foundCamera;
 
 		void Awake()
 		{
-			_cameraPositionId = Shader.PropertyToID("_cameraPosition");
-			_viewMatrixId = Shader.PropertyToID("_ViewMatrix");
+			if (_cameraPositionId == 0)
+			{
+				_cameraPositionId = Shader.PropertyToID("_cameraPosition");
+			}
+			if (_viewMatrixId == 0)
+			{
+				_viewMatrixId = Shader.PropertyToID("_ViewMatrix");
+			}
 			if (_camera == null)
 			{
 				Debug.LogWarning("[AVProVideo] No camera set for UpdateStereoMaterial component. If you are rendering in stereo then it is recommended to set this.");
@@ -46,34 +59,52 @@ namespace RenderHeads.Media.AVProVideo
 		{
 			m.SetVector(_cameraPositionId, camera.transform.position);
 			m.SetMatrix(_viewMatrixId, camera.worldToCameraMatrix.transpose);
+			if (_forceEyeMode != _setForceEyeMode)
+			{
+				Helper.SetupStereoEyeModeMaterial(m, _forceEyeMode);
+				_setForceEyeMode = _forceEyeMode;
+			}
 		}
 
 		// We do a LateUpdate() to allow for any changes in the camera position that may have happened in Update()
-		void LateUpdate()
+		private void LateUpdate()
 		{
-			Camera camera = _camera;
-			if (camera == null)
+			if (_camera != null && _foundCamera != _camera)
 			{
-				camera = Camera.main;
+				_foundCamera = _camera;
 			}
+			if (_foundCamera == null)
+			{
+				_foundCamera = Camera.main;
+				if (_foundCamera == null)
+				{
+					Debug.LogWarning("[AVPro Video] Cannot find main camera for UpdateStereoMaterial, this can lead to eyes flickering");
+					if (Camera.allCameras.Length > 0)
+					{
+						_foundCamera = Camera.allCameras[0];
+						Debug.LogWarning("[AVPro Video] UpdateStereoMaterial using camera " + _foundCamera.name);
+					}
+				}
+			}
+
 			if (_renderer == null && _material == null)
 			{
 				_renderer = this.gameObject.GetComponent<MeshRenderer>();
 			}
 
-			if (camera != null)
+			if (_foundCamera != null)
 			{
 				if (_renderer != null)
 				{
-					SetupMaterial(_renderer.material, camera);
+					SetupMaterial(_renderer.material, _foundCamera);
 				}
 				if (_material != null)
 				{
-					SetupMaterial(_material, camera);
+					SetupMaterial(_material, _foundCamera);
 				}
 				if (_uGuiComponent != null)
 				{
-					SetupMaterial(_uGuiComponent.material, camera);
+					SetupMaterial(_uGuiComponent.material, _foundCamera);
 				}
 			}
 		}

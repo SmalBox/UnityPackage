@@ -1,6 +1,4 @@
-﻿// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
-Shader "AVProVideo/Unlit/Transparent (texture+color+fog+packed alpha)"
+﻿Shader "AVProVideo/Unlit/Transparent (texture+color+fog+packed alpha)"
 {
 	Properties
 	{
@@ -57,6 +55,7 @@ Shader "AVProVideo/Unlit/Transparent (texture+color+fog+packed alpha)"
 			uniform sampler2D _MainTex;
 #if USE_YPCBCR
 			uniform sampler2D _ChromaTex;
+			uniform float4x4 _YpCbCrTransform;
 #endif
 			uniform float4 _MainTex_ST;
 			uniform float4 _MainTex_TexelSize;
@@ -66,7 +65,7 @@ Shader "AVProVideo/Unlit/Transparent (texture+color+fog+packed alpha)"
 			{
 				v2f o;
 
-				o.vertex = UnityObjectToClipPos(v.vertex);
+				o.vertex = XFormObjectToClip(v.vertex);
 				o.uv.xy = TRANSFORM_TEX(v.uv, _MainTex);
 
 				// Horrible hack to undo the scale transform to fit into our UV packing layout logic...
@@ -86,36 +85,17 @@ Shader "AVProVideo/Unlit/Transparent (texture+color+fog+packed alpha)"
 			
 			fixed4 frag (v2f i) : SV_Target
 			{
+				fixed4 col;
 #if USE_YPCBCR
-	#if SHADER_API_METAL || SHADER_API_GLES || SHADER_API_GLES3
-				float3 ypcbcr = float3(tex2D(_MainTex, i.uv.xy).r, tex2D(_ChromaTex, i.uv.xy).rg);
-	#else
-				float3 ypcbcr = float3(tex2D(_MainTex, i.uv.xy).r, tex2D(_ChromaTex, i.uv.xy).ra);
-	#endif
-				fixed4 col = fixed4(Convert420YpCbCr8ToRGB(ypcbcr), 1.0);
+				col = SampleYpCbCr(_MainTex, _ChromaTex, i.uv.xy, _YpCbCrTransform);
 #else
-				// Sample RGB
-				fixed4 col = tex2D(_MainTex, i.uv.xy);
-#endif
-
-#if APPLY_GAMMA
-				col.rgb = GammaToLinear(col.rgb);
+				col = SampleRGBA(_MainTex, i.uv.xy);
 #endif
 
 #if ALPHAPACK_TOP_BOTTOM | ALPHAPACK_LEFT_RIGHT
-				// Sample the alpha
-	#if USE_YPCBCR
-				col.a = tex2D(_MainTex, i.uv.zw).r;
-	#else
-				fixed4 alpha = tex2D(_MainTex, i.uv.zw);
-		#if APPLY_GAMMA
-				alpha.rgb = GammaToLinear(alpha.rgb);
-		#endif
-				col.a = (alpha.r + alpha.g + alpha.b) / 3.0;
-				//col.a = (alpha.r + alpha.g + alpha.g + alpha.b) / 4.0;
-				//clip(col.a - 0.01);
-	#endif
+				col.a = SamplePackedAlpha(_MainTex, i.uv.zw);
 #endif
+
 				col *= _Color;
 
 #if UNITY_VERSION >= 500

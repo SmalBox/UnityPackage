@@ -12,7 +12,7 @@
 using UnityEngine;
 
 //-----------------------------------------------------------------------------
-// Copyright 2015-2017 RenderHeads Ltd.  All rights reserverd.
+// Copyright 2015-2020 RenderHeads Ltd.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 namespace RenderHeads.Media.AVProVideo
@@ -25,10 +25,16 @@ namespace RenderHeads.Media.AVProVideo
 	//[ExecuteInEditMode]
 	[AddComponentMenu("AVPro Video/Cubemap Cube (VR)", 400)]
 #if UNITY_HELPATTRIB
-	[HelpURL("http://renderheads.com/product/avpro-video/")]
+	[HelpURL("http://renderheads.com/products/avpro-video/")]
 #endif
 	public class CubemapCube : MonoBehaviour
 	{
+		public enum Layout
+		{
+			FacebookTransform32,	// Layout for Facebooks FFMPEG Transform plugin with 3:2 layout
+			Facebook360Capture,		// Layout for Facebooks 360-Capture-SDK
+		}
+
 		private Mesh _mesh;
         protected MeshRenderer _renderer;
 
@@ -42,15 +48,21 @@ namespace RenderHeads.Media.AVProVideo
 		[SerializeField]
 		private float expansion_coeff = 1.01f;
 
+		[SerializeField]
+		private Layout _layout = Layout.FacebookTransform32;
+
 		private Texture _texture;
 		private bool _verticalFlip;
 		private int _textureWidth;
 		private int _textureHeight;
 		private static int _propApplyGamma;
-
+		private static int _propStereo;
+		
 		private static int _propUseYpCbCr;
 		private const string PropChromaTexName = "_ChromaTex";
 		private static int _propChromaTex;
+		private const string PropYpCbCrTransformName = "_YpCbCrTransform";
+		private static int _propYpCbCrTransform;
 
 		public MediaPlayer Player
 		{
@@ -61,6 +73,10 @@ namespace RenderHeads.Media.AVProVideo
 
 		void Awake()
 		{
+			if (_propStereo == 0)
+			{
+				_propStereo = Shader.PropertyToID("Stereo");
+			}
 			if (_propApplyGamma == 0)
 			{
 				_propApplyGamma = Shader.PropertyToID("_ApplyGamma");
@@ -69,6 +85,8 @@ namespace RenderHeads.Media.AVProVideo
 				_propUseYpCbCr = Shader.PropertyToID("_UseYpCbCr");
 			if (_propChromaTex == 0)
 				_propChromaTex = Shader.PropertyToID(PropChromaTexName);
+			if (_propYpCbCrTransform == 0)
+				_propYpCbCrTransform = Shader.PropertyToID(PropYpCbCrTransformName);
 		}
 
 		void Start()
@@ -151,11 +169,18 @@ namespace RenderHeads.Media.AVProVideo
 							Helper.SetupGammaMaterial(_renderer.material, _mediaPlayer.Info.PlayerSupportsLinearColorSpace());
 						}
 #endif
+						// Apply changes for stereo videos
+						if (_renderer.material.HasProperty(_propStereo))
+						{
+							Helper.SetupStereoMaterial(_renderer.material, _mediaPlayer.m_StereoPacking, _mediaPlayer.m_DisplayDebugStereoColorTint);
+						}
+
 						if (_renderer.material.HasProperty(_propUseYpCbCr) && _mediaPlayer.TextureProducer.GetTextureCount() == 2)
 						{
 							_renderer.material.EnableKeyword("USE_YPCBCR");
 							Texture resamplerTexYCRCB = _mediaPlayer.FrameResampler == null || _mediaPlayer.FrameResampler.OutputTexture == null ? null : _mediaPlayer.FrameResampler.OutputTexture[1];
 							_renderer.material.SetTexture(_propChromaTex, _mediaPlayer.m_Resample ? resamplerTexYCRCB : _mediaPlayer.TextureProducer.GetTexture(1));
+							_renderer.material.SetMatrix(_propYpCbCrTransform, _mediaPlayer.TextureProducer.GetYpCbCrTransform());
 						}
 					}
 
@@ -284,44 +309,89 @@ namespace RenderHeads.Media.AVProVideo
 			const float third = 1f / 3f;
 			const float half = 0.5f;
 
-			Vector2[] uv = new Vector2[]
+			Vector2[] uv = null;
+			if (_layout == Layout.Facebook360Capture)
 			{
-				//left
-				new Vector2(third+wO,1f-hO),
-				new Vector2((third*2f)-wO, 1f-hO),
-				new Vector2((third*2f)-wO, half+hO),
-				new Vector2(third+wO, half+hO),
+				uv = new Vector2[]
+				{
+					//front (texture middle top) correct left
+					new Vector2(third+wO, half-hO),
+					new Vector2((third*2f)-wO, half-hO),
+					new Vector2((third*2f)-wO, 0f+hO),
+					new Vector2(third+wO, 0f+hO),
+				
+					//left (texture middle bottom) correct front
+					new Vector2(third+wO,1f-hO),
+					new Vector2((third*2f)-wO, 1f-hO),
+					new Vector2((third*2f)-wO, half+hO),
+					new Vector2(third+wO, half+hO),
 
-				//front
-				new Vector2(third+wO, half-hO),
-				new Vector2((third*2f)-wO, half-hO),
-				new Vector2((third*2f)-wO, 0f+hO),
-				new Vector2(third+wO, 0f+hO),
+					//bottom (texture left top) correct right
+					new Vector2(0f+wO, half-hO),
+					new Vector2(third-wO, half-hO),
+					new Vector2(third-wO, 0f+hO),
+					new Vector2(0f+wO, 0f+hO),
 
-				//right
-				new Vector2(0f+wO, 1f-hO),
-				new Vector2(third-wO, 1f-hO),
-				new Vector2(third-wO, half+hO),
-				new Vector2(0f+wO, half+hO),
+					//top (texture right top) correct rear
+					new Vector2((third*2f)+wO, 1f-hO),
+					new Vector2(1f-wO, 1f-hO),
+					new Vector2(1f-wO, half+hO),
+					new Vector2((third*2f)+wO, half+hO),
 
-				//back
-				new Vector2((third*2)+wO, half-hO),
-				new Vector2(1f-wO, half-hO),
-				new Vector2(1f-wO, 0f+hO),
-				new Vector2((third*2f)+wO, 0f+hO),
+					//back (texture right bottom) correct ground
+					new Vector2((third*2f)+wO, 0f+hO),
+					new Vector2((third*2f)+wO, half-hO),
+					new Vector2(1f-wO, half-hO),
+					new Vector2(1f-wO, 0f+hO),
 
-				//bottom
-				new Vector2(0f+wO, 0f+hO),
-				new Vector2(0f+wO, half-hO),
-				new Vector2(third-wO, half-hO),
-				new Vector2(third-wO, 0f+hO),
+					//right (texture left bottom) correct sky
+					new Vector2(third-wO, 1f-hO),
+					new Vector2(third-wO, half+hO),
+					new Vector2(0f+wO, half+hO),
+					new Vector2(0f+wO, 1f-hO),
+				};
+			}
+			else if (_layout == Layout.FacebookTransform32)
+			{
+				uv = new Vector2[]
+				{
+					//left
+					new Vector2(third+wO,1f-hO),
+					new Vector2((third*2f)-wO, 1f-hO),
+					new Vector2((third*2f)-wO, half+hO),
+					new Vector2(third+wO, half+hO),
 
-				//top
-				new Vector2(1f-wO, 1f-hO),
-				new Vector2(1f-wO, half+hO),
-				new Vector2((third*2f)+wO, half+hO),
-				new Vector2((third*2f)+wO, 1f-hO)
-			};
+					//front
+					new Vector2(third+wO, half-hO),
+					new Vector2((third*2f)-wO, half-hO),
+					new Vector2((third*2f)-wO, 0f+hO),
+					new Vector2(third+wO, 0f+hO),
+
+					//right
+					new Vector2(0f+wO, 1f-hO),
+					new Vector2(third-wO, 1f-hO),
+					new Vector2(third-wO, half+hO),
+					new Vector2(0f+wO, half+hO),
+
+					//back
+					new Vector2((third*2f)+wO, half-hO),
+					new Vector2(1f-wO, half-hO),
+					new Vector2(1f-wO, 0f+hO),
+					new Vector2((third*2f)+wO, 0f+hO),
+
+					//bottom
+					new Vector2(0f+wO, 0f+hO),
+					new Vector2(0f+wO, half-hO),
+					new Vector2(third-wO, half-hO),
+					new Vector2(third-wO, 0f+hO),
+
+					//top
+					new Vector2(1f-wO, 1f-hO),
+					new Vector2(1f-wO, half+hO),
+					new Vector2((third*2f)+wO, half+hO),
+					new Vector2((third*2f)+wO, 1f-hO)
+				};
+			}
 			
 			if (flipY)
 			{

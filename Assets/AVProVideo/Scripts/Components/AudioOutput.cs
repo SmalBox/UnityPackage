@@ -5,7 +5,7 @@
 using UnityEngine;
 
 //-----------------------------------------------------------------------------
-// Copyright 2015-2017 RenderHeads Ltd.  All rights reserverd.
+// Copyright 2015-2020 RenderHeads Ltd.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 namespace RenderHeads.Media.AVProVideo
@@ -18,7 +18,7 @@ namespace RenderHeads.Media.AVProVideo
 	[RequireComponent(typeof(AudioSource))]
 	[AddComponentMenu("AVPro Video/Audio Output", 400)]
 #if UNITY_HELPATTRIB
-	[HelpURL("http://renderheads.com/product/avpro-video/")]
+	[HelpURL("http://renderheads.com/products/avpro-video/")]
 #endif
 	public class AudioOutput : MonoBehaviour
 	{
@@ -110,7 +110,7 @@ namespace RenderHeads.Media.AVProVideo
 		}
 
 #if (UNITY_5 || UNITY_5_4_OR_NEWER)
-#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN || UNITY_WSA_10_0 || UNITY_WINRT_8_1
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN || UNITY_WSA_10_0 || UNITY_WINRT_8_1 || UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX || UNITY_IOS || UNITY_TVOS
 		void OnAudioFilterRead(float[] data, int channels)
 		{
 			AudioOutputManager.Instance.RequestAudio(this, _mediaPlayer, data, _channelMask, channels, _audioOutputMode);

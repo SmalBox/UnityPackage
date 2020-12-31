@@ -1,6 +1,4 @@
-﻿// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
-Shader "AVProVideo/Unlit/Opaque (texture+color+fog+stereo support)"
+﻿Shader "AVProVideo/Unlit/Opaque (texture+color+fog+stereo support)"
 {
 	Properties
 	{
@@ -62,6 +60,7 @@ Shader "AVProVideo/Unlit/Opaque (texture+color+fog+stereo support)"
 			uniform sampler2D _MainTex;
 #if USE_YPCBCR
 			uniform sampler2D _ChromaTex;
+			uniform float4x4 _YpCbCrTransform;
 #endif
 			uniform float4 _MainTex_ST;
 			uniform fixed4 _Color;
@@ -71,11 +70,11 @@ Shader "AVProVideo/Unlit/Opaque (texture+color+fog+stereo support)"
 			{
 				v2f o;
 
-				o.vertex = UnityObjectToClipPos(v.vertex);
+				o.vertex = XFormObjectToClip(v.vertex);
 				o.uv.xy = TRANSFORM_TEX(v.uv, _MainTex);
 
 #if STEREO_TOP_BOTTOM | STEREO_LEFT_RIGHT
-				float4 scaleOffset = GetStereoScaleOffset(IsStereoEyeLeft(_cameraPosition, UNITY_MATRIX_V[0].xyz));
+				float4 scaleOffset = GetStereoScaleOffset(IsStereoEyeLeft(_cameraPosition, UNITY_MATRIX_V[0].xyz), _MainTex_ST.y < 0.0);
 				o.uv.xy *= scaleOffset.xy;
 				o.uv.xy += scaleOffset.zw;
 #elif STEREO_CUSTOM_UV
@@ -98,21 +97,13 @@ Shader "AVProVideo/Unlit/Opaque (texture+color+fog+stereo support)"
 			
 			fixed4 frag (v2f i) : SV_Target
 			{
+				fixed4 col;
 #if USE_YPCBCR
-	#if SHADER_API_METAL || SHADER_API_GLES || SHADER_API_GLES3
-				float3 ypcbcr = float3(tex2D(_MainTex, i.uv).r, tex2D(_ChromaTex, i.uv).rg);
-	#else
-				float3 ypcbcr = float3(tex2D(_MainTex, i.uv).r, tex2D(_ChromaTex, i.uv).ra);
-	#endif
-				fixed4 col = fixed4(Convert420YpCbCr8ToRGB(ypcbcr), 1.0);
+				col = SampleYpCbCr(_MainTex, _ChromaTex, i.uv.xy, _YpCbCrTransform);
 #else
-				fixed4 col = tex2D(_MainTex, i.uv.xy);
+				col = SampleRGBA(_MainTex, i.uv.xy);
 #endif
 				col *= _Color;
-#if APPLY_GAMMA
-				col.rgb = GammaToLinear(col.rgb);
-#endif
-
 #if STEREO_DEBUG
 				col *= i.tint;
 #endif				
@@ -121,7 +112,7 @@ Shader "AVProVideo/Unlit/Opaque (texture+color+fog+stereo support)"
 				UNITY_APPLY_FOG(i.fogCoord, col);
 #endif
 
-				return fixed4(col.rgb, 1.0);
+				return col;
 			}
 			ENDCG
 		}

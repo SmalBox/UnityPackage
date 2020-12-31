@@ -1,20 +1,19 @@
-﻿// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
-Shader "AVProVideo/VR/InsideSphere Unlit Transparent(stereo+color+fog+alpha)"
+﻿Shader "AVProVideo/VR/InsideSphere Unlit Transparent(stereo+color+fog+alpha)"
 {
     Properties
     {
         _MainTex ("Texture", 2D) = "black" {}
+		_ChromaTex("Chroma", 2D) = "white" {}
 		_Color("Main Color", Color) = (1,1,1,1)
 
 		[KeywordEnum(None, Top_Bottom, Left_Right, Custom_UV)] Stereo ("Stereo Mode", Float) = 0
 		[KeywordEnum(None, Top_Bottom, Left_Right)] AlphaPack("Alpha Pack", Float) = 0
 		[Toggle(STEREO_DEBUG)] _StereoDebug ("Stereo Debug Tinting", Float) = 0
+		[KeywordEnum(None, EquiRect180)] Layout("Layout", Float) = 0
 		[Toggle(HIGH_QUALITY)] _HighQuality ("High Quality", Float) = 0
 		[Toggle(APPLY_GAMMA)] _ApplyGamma("Apply Gamma", Float) = 0
-		_EdgeFeather("Edge Feather", Range (0, 1)) = 0
-	
-
+		[Toggle(USE_YPCBCR)] _UseYpCbCr("Use YpCbCr", Float) = 0
+		_EdgeFeather("Edge Feather", Range (0, 1)) = 0.02
     }
     SubShader
     {
@@ -36,9 +35,6 @@ Shader "AVProVideo/VR/InsideSphere Unlit Transparent(stereo+color+fog+alpha)"
             #pragma vertex vert
             #pragma fragment frag
 
-			//#define STEREO_DEBUG 1
-			//#define HIGH_QUALITY 1
-
 			#pragma multi_compile_fog
 			#pragma multi_compile MONOSCOPIC STEREO_TOP_BOTTOM STEREO_LEFT_RIGHT STEREO_CUSTOM_UV
 			#pragma multi_compile ALPHAPACK_NONE ALPHAPACK_TOP_BOTTOM ALPHAPACK_LEFT_RIGHT
@@ -49,6 +45,8 @@ Shader "AVProVideo/VR/InsideSphere Unlit Transparent(stereo+color+fog+alpha)"
 			#pragma multi_compile STEREO_DEBUG_OFF STEREO_DEBUG
 			#pragma multi_compile HIGH_QUALITY_OFF HIGH_QUALITY
 			#pragma multi_compile APPLY_GAMMA_OFF APPLY_GAMMA
+			#pragma multi_compile USE_YPCBCR_OFF USE_YPCBCR
+			#pragma multi_compile LAYOUT_NONE LAYOUT_EQUIRECT180
 
             struct appdata
             {
@@ -57,11 +55,14 @@ Shader "AVProVideo/VR/InsideSphere Unlit Transparent(stereo+color+fog+alpha)"
 				float3 normal : NORMAL;
 #else
                 float2 uv : TEXCOORD0; // texture coordinate			
-#if STEREO_CUSTOM_UV
+	#if STEREO_CUSTOM_UV
 				float2 uv2 : TEXCOORD1;	// Custom uv set for right eye (left eye is in TEXCOORD0)
+	#endif
 #endif
+
+#ifdef UNITY_STEREO_INSTANCING_ENABLED
+				UNITY_VERTEX_INPUT_INSTANCE_ID
 #endif
-				
             };
 
             struct v2f
@@ -70,29 +71,37 @@ Shader "AVProVideo/VR/InsideSphere Unlit Transparent(stereo+color+fog+alpha)"
 #if HIGH_QUALITY
 				float3 normal : TEXCOORD0;
 				
-#if STEREO_TOP_BOTTOM || STEREO_LEFT_RIGHT
+	#if STEREO_TOP_BOTTOM || STEREO_LEFT_RIGHT
 				float4 scaleOffset : TEXCOORD1; // texture coordinate
-#if UNITY_VERSION >= 500
+		#if UNITY_VERSION >= 500
 				UNITY_FOG_COORDS(2)
-#endif
-#else
-#if UNITY_VERSION >= 500
+		#endif
+	#else
+		#if UNITY_VERSION >= 500
 				UNITY_FOG_COORDS(1)
-#endif
-#endif
+		#endif
+	#endif
 #else
                 float4 uv : TEXCOORD0; // texture coordinate
-#if UNITY_VERSION >= 500
+	#if UNITY_VERSION >= 500
 				UNITY_FOG_COORDS(1)
-#endif
+	#endif
 #endif
 
 #if STEREO_DEBUG
 				float4 tint : COLOR;
 #endif
+
+#ifdef UNITY_STEREO_INSTANCING_ENABLED
+				UNITY_VERTEX_OUTPUT_STEREO
+#endif
             };
 
             uniform sampler2D _MainTex;
+#if USE_YPCBCR
+			uniform sampler2D _ChromaTex;
+			uniform float4x4 _YpCbCrTransform;
+#endif
 			uniform float4 _MainTex_ST;
 			uniform float4 _MainTex_TexelSize;
 			uniform float3 _cameraPosition;
@@ -102,22 +111,35 @@ Shader "AVProVideo/VR/InsideSphere Unlit Transparent(stereo+color+fog+alpha)"
             v2f vert (appdata v)
             {
                 v2f o;
-				o.vertex = UnityObjectToClipPos(v.vertex);
+
+#ifdef UNITY_STEREO_INSTANCING_ENABLED
+				UNITY_SETUP_INSTANCE_ID(v);						// calculates and sets the built-n unity_StereoEyeIndex and unity_InstanceID Unity shader variables to the correct values based on which eye the GPU is currently rendering
+				UNITY_INITIALIZE_OUTPUT(v2f, o);				// initializes all v2f values to 0
+				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);		// tells the GPU which eye in the texture array it should render to
+#endif
+								
+				o.vertex = XFormObjectToClip(v.vertex);
 #if !HIGH_QUALITY
 				o.uv.zw = 0.0;
 				o.uv.xy = TRANSFORM_TEX(v.uv, _MainTex);
+				#if LAYOUT_EQUIRECT180
+				o.uv.x = ((o.uv.x - 0.5) * 2.0) + 0.5;
+				// Set value for clipping if UV area is behind viewer
+				o.uv.z = -1.0;
+				if (v.uv.x > 0.25 && v.uv.x < 0.75)
+				{
+					o.uv.z = 1.0;
+				}
+				#endif
                 o.uv.xy = float2(1.0-o.uv.x, o.uv.y);
 #endif
 
-				
-
 #if STEREO_TOP_BOTTOM || STEREO_LEFT_RIGHT
-				float4 scaleOffset = GetStereoScaleOffset(IsStereoEyeLeft(_cameraPosition, UNITY_MATRIX_V[0].xyz));
+				float4 scaleOffset = GetStereoScaleOffset(IsStereoEyeLeft(_cameraPosition, UNITY_MATRIX_V[0].xyz), _MainTex_ST.y < 0.0);
 
 				#if !HIGH_QUALITY
 				o.uv.xy *= scaleOffset.xy;
 				o.uv.xy += scaleOffset.zw;
-				
 				#else
 				o.scaleOffset = scaleOffset;
 				#endif
@@ -130,9 +152,9 @@ Shader "AVProVideo/VR/InsideSphere Unlit Transparent(stereo+color+fog+alpha)"
 #endif
 				
 #if !HIGH_QUALITY
-#if ALPHAPACK_TOP_BOTTOM || ALPHAPACK_LEFT_RIGHT
-				o.uv = OffsetAlphaPackingUV(_MainTex_TexelSize.xy, o.uv.xy, _MainTex_ST.y < 0.0);
-#endif
+	#if ALPHAPACK_TOP_BOTTOM || ALPHAPACK_LEFT_RIGHT
+				o.uv = OffsetAlphaPackingUV(_MainTex_TexelSize.xy, o.uv.xy, _MainTex_ST.y > 0.0);
+	#endif
 #endif
 
 #if HIGH_QUALITY
@@ -146,7 +168,6 @@ Shader "AVProVideo/VR/InsideSphere Unlit Transparent(stereo+color+fog+alpha)"
 #if UNITY_VERSION >= 500
 				UNITY_TRANSFER_FOG(o, o.vertex);
 #endif
-
                 return o;
 			}
 
@@ -154,9 +175,11 @@ Shader "AVProVideo/VR/InsideSphere Unlit Transparent(stereo+color+fog+alpha)"
             fixed4 frag (v2f i) : SV_Target
 			{
 				float4 uv = 0;
-
 #if HIGH_QUALITY
 				float3 n = normalize(i.normal);
+				#if LAYOUT_EQUIRECT180
+				clip(-n.z);	// Clip pixels on the back of the sphere
+				#endif
 
 				float M_1_PI = 1.0 / 3.1415926535897932384626433832795;
 				float M_1_2PI = 1.0 / 6.283185307179586476925286766559;
@@ -166,6 +189,9 @@ Shader "AVProVideo/VR/InsideSphere Unlit Transparent(stereo+color+fog+alpha)"
 				uv.x = fmod(uv.x, 1.0);
 				//uv.x = uv.x % 1.0;
 				uv.xy = TRANSFORM_TEX(uv, _MainTex);
+				#if LAYOUT_EQUIRECT180
+				uv.x = ((uv.x - 0.5) * 2.0) + 0.5;
+				#endif
 				#if STEREO_TOP_BOTTOM | STEREO_LEFT_RIGHT
 				uv.xy *= i.scaleOffset.xy;
 				uv.xy += i.scaleOffset.zw;
@@ -175,25 +201,20 @@ Shader "AVProVideo/VR/InsideSphere Unlit Transparent(stereo+color+fog+alpha)"
 				#endif
 #else
 				uv = i.uv;
+				#if LAYOUT_EQUIRECT180
+				clip(i.uv.z);	// Clip pixels on the back of the sphere
+				#endif
 #endif
 
-				fixed4 col = tex2D(_MainTex, uv.xy);
-
-#if APPLY_GAMMA
-				col.rgb = GammaToLinear(col.rgb);
+				fixed4 col;
+#if USE_YPCBCR
+				col = SampleYpCbCr(_MainTex, _ChromaTex, uv.xy, _YpCbCrTransform);
+#else
+				col = SampleRGBA(_MainTex, uv.xy);
 #endif
 
-#if ALPHAPACK_TOP_BOTTOM || ALPHAPACK_LEFT_RIGHT
-				// Sample the alpha
-				fixed4 alpha = tex2D(_MainTex, uv.zw);
-#if APPLY_GAMMA
-				alpha.rgb = GammaToLinear(alpha.rgb);
-#endif
-
-				col.a = (alpha.r + alpha.g + alpha.b) / 3.0;
-				//col.a = (alpha.r + alpha.g + alpha.g + alpha.b) / 4.0;
-
-				//clip(col.a - 0.01);
+#if ALPHAPACK_TOP_BOTTOM | ALPHAPACK_LEFT_RIGHT
+				col.a = SamplePackedAlpha(_MainTex, uv.zw);
 #endif
 
 #if STEREO_DEBUG
@@ -206,6 +227,7 @@ Shader "AVProVideo/VR/InsideSphere Unlit Transparent(stereo+color+fog+alpha)"
 				UNITY_APPLY_FOG(i.fogCoord, col);
 #endif
 
+#if LAYOUT_EQUIRECT180
 				// Apply edge feathering based on UV mapping - this is useful if you're using a hemisphere mesh for 180 degree video and want to have soft edges
 				if (_EdgeFeather > 0.0)
 				{
@@ -246,6 +268,7 @@ Shader "AVProVideo/VR/InsideSphere Unlit Transparent(stereo+color+fog+alpha)"
 					float a = smoothstep(0.0, _EdgeFeather, d);
 					col.a *= a;
 				}
+#endif
 
 				return col;
 

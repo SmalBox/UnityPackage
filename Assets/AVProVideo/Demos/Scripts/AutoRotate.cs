@@ -1,23 +1,26 @@
 ﻿using UnityEngine;
-using System.Collections;
 
 //-----------------------------------------------------------------------------
-// Copyright 2015-2017 RenderHeads Ltd.  All rights reserverd.
+// Copyright 2015-2020 RenderHeads Ltd.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 namespace RenderHeads.Media.AVProVideo.Demos
 {
+	/// <summary>
+	/// Rotates a transform, randomly changing direction and speed every few seconds
+	/// </summary>
 	[RequireComponent(typeof(Transform))]
 	public class AutoRotate : MonoBehaviour
 	{
 		private float x, y, z;
 		private float _timer;
 
-		void Awake()
+		private void Awake()
 		{
 			Randomise();
 		}
-		void Update()
+
+		private void Update()
 		{
 			this.transform.Rotate(x * Time.deltaTime, y * Time.deltaTime, z * Time.deltaTime);
 			_timer -= Time.deltaTime;

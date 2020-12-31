@@ -1,6 +1,4 @@
-﻿// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
-Shader "AVProVideo/IMGUI/Texture Transparent"
+﻿Shader "AVProVideo/IMGUI/Texture Transparent"
 {
 	Properties
 	{
@@ -49,12 +47,13 @@ Shader "AVProVideo/IMGUI/Texture Transparent"
 			{
 				float4 vertex : SV_POSITION;
 				fixed4 color : COLOR;
-				float4 texcoord : TEXCOORD0;
+				float4 uv : TEXCOORD0;
 			};
 
 			uniform sampler2D _MainTex;
 #if USE_YPCBCR
 			uniform sampler2D _ChromaTex;
+			uniform float4x4 _YpCbCrTransform;
 #endif
 			uniform float4 _MainTex_ST;
 			uniform float4 _MainTex_TexelSize;
@@ -63,40 +62,24 @@ Shader "AVProVideo/IMGUI/Texture Transparent"
 			v2f vert(appdata_t v)
 			{
 				v2f o;
-				o.vertex = UnityObjectToClipPos(v.vertex);
+				o.vertex = XFormObjectToClip(v.vertex);
 				o.color = v.color;
-				o.texcoord = OffsetAlphaPackingUV(_MainTex_TexelSize.xy, TRANSFORM_TEX(v.texcoord, _MainTex), _VertScale < 0.0);
+				o.uv = OffsetAlphaPackingUV(_MainTex_TexelSize.xy, TRANSFORM_TEX(v.texcoord, _MainTex), _VertScale < 0.0);
 
 				return o;
 			}
 
 			fixed4 frag(v2f i) : SV_Target
 			{
+				fixed4 col;
 #if USE_YPCBCR
-	#if SHADER_API_METAL || SHADER_API_GLES || SHADER_API_GLES3
-				float3 ypcbcr = float3(tex2D(_MainTex, i.texcoord.xy).r, tex2D(_ChromaTex, i.texcoord.xy).rg);
-	#else
-				float3 ypcbcr = float3(tex2D(_MainTex, i.texcoord.xy).r, tex2D(_ChromaTex, i.texcoord.xy).ra);
-	#endif
-				fixed4 col = fixed4(Convert420YpCbCr8ToRGB(ypcbcr), 1.0);
+				col = SampleYpCbCr(_MainTex, _ChromaTex, i.uv.xy, _YpCbCrTransform);
 #else
-				// Sample RGB
-				fixed4 col = tex2D(_MainTex, i.texcoord.xy);
+				col = SampleRGBA(_MainTex, i.uv.xy);
 #endif
-#if APPLY_GAMMA
-				col.rgb = LinearToGamma(col.rgb);
-#endif
+
 #if ALPHAPACK_TOP_BOTTOM | ALPHAPACK_LEFT_RIGHT
-				// Sample the alpha
-	#if USE_YPCBCR
-				col.a = tex2D(_MainTex, i.texcoord.zw).r;	
-	#else
-				fixed4 alpha = tex2D(_MainTex, i.texcoord.zw);
-		#if APPLY_GAMMA
-				alpha.rgb = LinearToGamma(alpha.rgb);
-		#endif
-				col.a = (alpha.r + alpha.g + alpha.b) / 3.0;
-	#endif
+				col.a = SamplePackedAlpha(_MainTex, i.uv.zw);
 #endif
 				return col * i.color;
 			}

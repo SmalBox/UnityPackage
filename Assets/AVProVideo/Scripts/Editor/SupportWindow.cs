@@ -8,45 +8,50 @@ using UnityEngine;
 using UnityEditor;
 
 //-----------------------------------------------------------------------------
-// Copyright 2016-2017 RenderHeads Ltd.  All rights reserved.
+// Copyright 2016-2020 RenderHeads Ltd.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 namespace RenderHeads.Media.AVProVideo.Editor
 {
-	public class PopupExample : PopupWindowContent
-	{
-		private string _text;
-
-		public PopupExample(string text)
-		{
-			_text = text;
-		}
-
-		public override Vector2 GetWindowSize()
-		{
-			return new Vector2(400, 520);
-		}
-
-		public override void OnGUI(Rect rect)
-		{
-			GUILayout.BeginHorizontal();
-			GUILayout.Label("Copy-Paste this text, then ", EditorStyles.boldLabel);
-			GUI.color = Color.green;
-			if (GUILayout.Button("Go to Forum", GUILayout.ExpandWidth(true)))
-			{
-				Application.OpenURL(MediaPlayerEditor.LinkForumLastPage);
-			}
-			GUILayout.EndHorizontal();
-			GUI.color = Color.white;
-			EditorGUILayout.TextArea(_text);
-		}
-	}
-
 	/// <summary>
-	/// 
+	/// A window to display options to the user to help them report bugs
+	/// Also collects some metadata about the machine specs, plugin version etc
 	/// </summary>
 	public class SupportWindow : EditorWindow
 	{
+		private class MyPopupWindow : PopupWindowContent
+		{
+			private string _text;
+			private string _url;
+			private string _buttonMessage;
+
+			public MyPopupWindow(string text, string buttonMessage,string url)
+			{
+				_text = text;
+				_url = url;
+				_buttonMessage = buttonMessage;
+			}
+
+			public override Vector2 GetWindowSize()
+			{
+				return new Vector2(400, 520);
+			}
+
+			public override void OnGUI(Rect rect)
+			{
+				GUILayout.BeginHorizontal();
+				GUILayout.Label("Copy-Paste this text, then ", EditorStyles.boldLabel);
+				GUI.color = Color.green;
+				if (GUILayout.Button(_buttonMessage, GUILayout.ExpandWidth(true)))
+				{
+					Application.OpenURL(_url);
+				}
+				GUILayout.EndHorizontal();
+				GUI.color = Color.white;
+				EditorGUILayout.TextArea(_text);
+			}
+		}
+
 		private static bool _isCreated = false;
 		private static bool _isInit = false;
 
@@ -222,6 +227,17 @@ namespace RenderHeads.Media.AVProVideo.Editor
 				GUILayout.BeginHorizontal();
 				GUILayout.Label("4) ");
 				GUI.color = Color.green;
+				if (GUILayout.Button("Read the GitHub Issues", GUILayout.ExpandWidth(false)))
+				{
+					Application.OpenURL(MediaPlayerEditor.LinkGithubIssues);
+				}
+				GUI.color = Color.white;
+				GUILayout.FlexibleSpace();
+				GUILayout.EndHorizontal();
+
+				GUILayout.BeginHorizontal();
+				GUILayout.Label("5) ");
+				GUI.color = Color.green;
 				if (GUILayout.Button("Read the Scripting Reference", GUILayout.ExpandWidth(false)))
 				{
 					Application.OpenURL(MediaPlayerEditor.LinkScriptingClassReference);
@@ -231,7 +247,7 @@ namespace RenderHeads.Media.AVProVideo.Editor
 				GUILayout.EndHorizontal();
 
 				GUILayout.BeginHorizontal();
-				GUILayout.Label("5) ");
+				GUILayout.Label("6) ");
 				GUI.color = Color.green;
 				if (GUILayout.Button("Visit the AVPro Video Website", GUILayout.ExpandWidth(false)))
 				{
@@ -242,7 +258,7 @@ namespace RenderHeads.Media.AVProVideo.Editor
 				GUILayout.EndHorizontal();
 
 				GUILayout.BeginHorizontal();
-				GUILayout.Label("6) ");
+				GUILayout.Label("7) ");
 				GUI.color = Color.green;
 				if (GUILayout.Button("Browse the Unity Forum", GUILayout.ExpandWidth(false)))
 				{
@@ -291,8 +307,6 @@ namespace RenderHeads.Media.AVProVideo.Editor
 				////GUILayout.Label("System Information");
 				//GUILayout.TextArea(CollectSupportData());
 
-				string emailSubject = "AVPro Video - " + _emailTopic;
-
 				string emailBody = System.Environment.NewLine + System.Environment.NewLine;
 				emailBody += "Problem description:" + System.Environment.NewLine + System.Environment.NewLine + _emailDescription + System.Environment.NewLine + System.Environment.NewLine;
 				emailBody += "Device (which devices are you having the issue with - model, OS version number):" + System.Environment.NewLine + System.Environment.NewLine + _emailDeviceSpecs + System.Environment.NewLine + System.Environment.NewLine;
@@ -312,16 +326,13 @@ namespace RenderHeads.Media.AVProVideo.Editor
 				GUILayout.BeginHorizontal();
 				GUILayout.FlexibleSpace();
 				GUI.color = Color.green;
-				if (GUILayout.Button("Send via Email ➔\nunitysupport@renderheads.com", GUILayout.ExpandWidth(false), GUILayout.Height(32f)))
+				if (GUILayout.Button("Send at GitHub Issues ➔", GUILayout.ExpandWidth(false), GUILayout.Height(32f)))
 				{
-					emailBody = emailBody.Replace(System.Environment.NewLine, "%0D%0A");
-					Application.OpenURL(string.Format("mailto:unitysupport@renderheads.com?subject={0}&body={1}", emailSubject, emailBody));
+					PopupWindow.Show(buttonRect, new MyPopupWindow(emailBody, "Go to GitHub", MediaPlayerEditor.LinkGithubIssuesNew));
 				}
 				if (GUILayout.Button("Send at the Unity Forum ➔", GUILayout.ExpandWidth(false), GUILayout.Height(32f)))
 				{
-					PopupWindow.Show(buttonRect, new PopupExample(emailBody));
-					//SupportWindowPopup.Init(emailBody);
-					//EditorUtility.DisplayDialog("AVPro Video", "Please include as much information as you can in the forum post", "OK");
+					PopupWindow.Show(buttonRect, new MyPopupWindow(emailBody, "Go to Forum", MediaPlayerEditor.LinkForumLastPage));
 				}
 
 				if (Event.current.type == EventType.Repaint)
@@ -370,6 +381,11 @@ namespace RenderHeads.Media.AVProVideo.Editor
 			catch (System.DllNotFoundException e)
 			{
 				Debug.LogError("[AVProVideo] Failed to load DLL. " + e.Message);
+#if (UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN)
+#if !UNITY_5 && !UNITY_5_4_OR_NEWER
+				Debug.LogError("[AVProVideo] You may need to copy the Audio360 DLL into the root folder of your project (the folder above Assets)");
+#endif
+#endif
 			}
 			return version;
 		}

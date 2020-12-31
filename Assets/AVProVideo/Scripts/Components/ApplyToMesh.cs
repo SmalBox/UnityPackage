@@ -12,14 +12,17 @@
 using UnityEngine;
 
 //-----------------------------------------------------------------------------
-// Copyright 2015-2017 RenderHeads Ltd.  All rights reserverd.
+// Copyright 2015-2020 RenderHeads Ltd.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 namespace RenderHeads.Media.AVProVideo
 {
+	/// <summary>
+	/// Sets up a mesh to display the video from a MediaPlayer
+	/// </summary>
 	[AddComponentMenu("AVPro Video/Apply To Mesh", 300)]
 #if UNITY_HELPATTRIB
-	[HelpURL("http://renderheads.com/product/avpro-video/")]
+	[HelpURL("http://renderheads.com/products/avpro-video/")]
 #endif
 	public class ApplyToMesh : MonoBehaviour 
 	{
@@ -27,18 +30,16 @@ namespace RenderHeads.Media.AVProVideo
 
 		[Header("Media Source")]
 
-		[SerializeField]
-		private MediaPlayer _media = null;
+		[SerializeField] MediaPlayer _media = null;
 
 		public MediaPlayer Player
 		{
 			get { return _media; }
-			set { if (_media != value) { _media = value; _isDirty = true; } }
+			set { ChangeMediaPlayer(value); }
 		}
 
 		[Tooltip("Default texture to display when the video texture is preparing")]
-		[SerializeField]
-		private Texture2D _defaultTexture = null;
+		[SerializeField] Texture2D _defaultTexture = null;
 
 		public Texture2D DefaultTexture
 		{
@@ -49,8 +50,7 @@ namespace RenderHeads.Media.AVProVideo
 		[Space(8f)]
 		[Header("Renderer Target")]
 
-		[SerializeField]
-		private Renderer _mesh = null;
+		[SerializeField] Renderer _mesh = null;
 
 		public Renderer MeshRenderer
 		{
@@ -58,8 +58,7 @@ namespace RenderHeads.Media.AVProVideo
 			set { if (_mesh != value) { _mesh = value; _isDirty = true; } }
 		}
 
-		[SerializeField]
-		private string _texturePropertyName = "_MainTex";
+		[SerializeField] string _texturePropertyName = "_MainTex";
 
 		public string TexturePropertyName
 		{
@@ -77,8 +76,7 @@ namespace RenderHeads.Media.AVProVideo
 			}
 		}
 
-		[SerializeField]
-		private Vector2 _offset = Vector2.zero;
+		[SerializeField] Vector2 _offset = Vector2.zero;
 
 		public Vector2 Offset
 		{
@@ -86,8 +84,7 @@ namespace RenderHeads.Media.AVProVideo
 			set { if (_offset != value) { _offset = value; _isDirty = true; } }
 		}
 
-		[SerializeField]
-		private Vector2 _scale = Vector2.one;
+		[SerializeField] Vector2 _scale = Vector2.one;
 
 		public Vector2 Scale
 		{
@@ -104,12 +101,56 @@ namespace RenderHeads.Media.AVProVideo
 		private static int _propStereo;
 		private static int _propAlphaPack;
 		private static int _propApplyGamma;
+		private static int _propLayout;
 
 		private const string PropChromaTexName = "_ChromaTex";
-		private static int _propChromaTex;
-
+		private static  int _propChromaTex;
+		private const string PropYpCbCrTransformName = "_YpCbCrTransform";
+		private static int _propYpCbCrTransform;
 		private const string PropUseYpCbCrName = "_UseYpCbCr";
 		private static int _propUseYpCbCr;
+		private static int _propCroppingScalars;
+
+		private void Awake()
+		{
+			if (_propStereo == 0)
+			{
+				_propStereo = Shader.PropertyToID("Stereo");
+			}
+			if (_propAlphaPack == 0)
+			{
+				_propAlphaPack = Shader.PropertyToID("AlphaPack");
+			}
+			if (_propApplyGamma == 0)
+			{
+				_propApplyGamma = Shader.PropertyToID("_ApplyGamma");
+			}
+			if (_propLayout == 0)
+			{
+				_propLayout = Shader.PropertyToID("Layout");
+			}
+			if (_propChromaTex == 0)
+			{
+				_propChromaTex = Shader.PropertyToID(PropChromaTexName);
+			}
+			if (_propYpCbCrTransform == 0)
+			{
+				_propYpCbCrTransform = Shader.PropertyToID(PropYpCbCrTransformName);
+			}
+			if (_propUseYpCbCr == 0)
+			{
+				_propUseYpCbCr = Shader.PropertyToID(PropUseYpCbCrName);
+			}
+			if (_propCroppingScalars == 0)
+			{
+				_propCroppingScalars = Shader.PropertyToID("_CroppingScalars");
+			}
+
+			if (_media != null)
+			{
+				_media.Events.AddListener(OnMediaPlayerEvent);
+			}
+		}
 
 		public void ForceUpdate()
 		{
@@ -117,21 +158,32 @@ namespace RenderHeads.Media.AVProVideo
 			LateUpdate();
 		}
 
-		private void Awake()
+		// Callback function to handle events
+		private void OnMediaPlayerEvent(MediaPlayer mp, MediaPlayerEvent.EventType et, ErrorCode errorCode)
 		{
-			if (_propStereo == 0 || _propAlphaPack == 0)
+			switch (et)
 			{
-				_propStereo = Shader.PropertyToID("Stereo");
-				_propAlphaPack = Shader.PropertyToID("AlphaPack");
-				_propApplyGamma = Shader.PropertyToID("_ApplyGamma");
+				case MediaPlayerEvent.EventType.FirstFrameReady:
+				case MediaPlayerEvent.EventType.PropertiesChanged:
+					ForceUpdate();
+					break;
 			}
-			if (_propChromaTex == 0)
+		}
+
+		private void ChangeMediaPlayer(MediaPlayer player)
+		{
+			if (_media != player)
 			{
-				_propChromaTex = Shader.PropertyToID(PropChromaTexName);
-			}
-			if (_propUseYpCbCr == 0)
-			{
-				_propUseYpCbCr = Shader.PropertyToID(PropUseYpCbCrName);
+				if (_media != null)
+				{
+					_media.Events.RemoveListener(OnMediaPlayerEvent);
+				}
+				_media = player;
+				if (_media != null)
+				{
+					_media.Events.AddListener(OnMediaPlayerEvent);
+				}
+				_isDirty = true; 
 			}
 		}
 
@@ -241,6 +293,7 @@ namespace RenderHeads.Media.AVProVideo
 								{
 									mat.EnableKeyword("USE_YPCBCR");
 									mat.SetTexture(_propChromaTex, texture);
+									mat.SetMatrix(_propYpCbCrTransform, _media.TextureProducer.GetYpCbCrTransform());
 #if UNITY_5_6_OR_NEWER
 									if (requiresYFlip)
 									{
@@ -269,6 +322,11 @@ namespace RenderHeads.Media.AVProVideo
 
 							if (_media != null)
 							{
+								// Apply changes for layout
+								if (mat.HasProperty(_propLayout))
+								{
+									Helper.SetupLayoutMaterial(mat, _media.VideoLayoutMapping);
+								}
 								// Apply changes for stereo videos
 								if (mat.HasProperty(_propStereo))
 								{
@@ -281,12 +339,35 @@ namespace RenderHeads.Media.AVProVideo
 								}
 #if UNITY_PLATFORM_SUPPORTS_LINEAR
 								// Apply gamma
-								if (mat.HasProperty(_propApplyGamma) && _media.Info != null)
+								if (mat.HasProperty(_propApplyGamma))
 								{
-									Helper.SetupGammaMaterial(mat, _media.Info.PlayerSupportsLinearColorSpace());
+									if (texture == _defaultTexture || _media.Info == null)
+									{
+										Helper.SetupGammaMaterial(mat, true);
+									}
+									else
+									{
+										Helper.SetupGammaMaterial(mat, _media.Info.PlayerSupportsLinearColorSpace());
+									}
 								}
 #else
-								_propApplyGamma |= 0;
+								_propApplyGamma |= 0;	// Prevent compiler warning about unused variable
+#endif
+
+#if (!UNITY_EDITOR && UNITY_ANDROID)
+								// Adjust for cropping (when the decoder decodes in blocks that overrun the video frame size, it pads), OES only as we apply this lower down for none-OES
+								if (_media.PlatformOptionsAndroid.useFastOesPath && 
+									_media.Info != null && 
+									mat.HasProperty(_propCroppingScalars) )
+								{
+									float[] transform = _media.Info.GetTextureTransform();
+									if (transform != null)
+									{
+										mat.SetVector(_propCroppingScalars, new Vector4( transform[0], transform[3], 1.0f, 1.0f));
+									}
+								}
+#else
+								_propCroppingScalars |= 0;	// Prevent compiler warning about unused variable
 #endif
 							}
 						}
@@ -320,6 +401,11 @@ namespace RenderHeads.Media.AVProVideo
 		private void OnDisable()
 		{
 			ApplyMapping(_defaultTexture, false);
+		}
+
+		private void OnDestroy()
+		{
+			ChangeMediaPlayer(null);
 		}
 	}
 }

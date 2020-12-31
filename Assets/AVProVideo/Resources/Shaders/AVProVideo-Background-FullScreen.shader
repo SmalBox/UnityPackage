@@ -41,12 +41,13 @@
 			uniform sampler2D _MainTex;
 #if USE_YPCBCR
 			uniform sampler2D _ChromaTex;
+			uniform float4x4 _YpCbCrTransform;
 #endif
 			uniform float4 _MainTex_ST;
 			uniform float4 _MainTex_TexelSize;
 			uniform fixed4 _Color;
 
-			v2f vert (appdata_img v)
+			v2f vert(appdata_img v)
 			{
 				v2f o;
 
@@ -69,19 +70,11 @@
 			
 			fixed4 frag (v2f i) : SV_Target
 			{
+				fixed4 col;
 #if USE_YPCBCR
-	#if SHADER_API_METAL || SHADER_API_GLES || SHADER_API_GLES3
-				float3 ypcbcr = float3(tex2D(_MainTex, i.uv).r, tex2D(_ChromaTex, i.uv).rg);
-	#else
-				float3 ypcbcr = float3(tex2D(_MainTex, i.uv).r, tex2D(_ChromaTex, i.uv).ra);
-	#endif
-				float3 col = Convert420YpCbCr8ToRGB(ypcbcr);
+				col = SampleYpCbCr(_MainTex, _ChromaTex, i.uv, _YpCbCrTransform);
 #else
-				// Sample the texture
-				fixed4 col = tex2D(_MainTex, i.uv);
-#endif
-#if APPLY_GAMMA
-				col.rgb = GammaToLinear(col.rgb);
+				col = SampleRGBA(_MainTex, i.uv);
 #endif
 				col *= _Color;
 				return fixed4(col.rgb, 1.0);

@@ -32,10 +32,11 @@
 		#include "AVProVideo.cginc"
 
 		uniform sampler2D _MainTex;
-		//uniform float4 _MainTex_ST;
+		uniform float4 _MainTex_ST;
 		uniform float4 _MainTex_TexelSize;
 #if USE_YPCBCR
 		uniform sampler2D _ChromaTex;
+		uniform float4x4 _YpCbCrTransform;
 #endif
 		uniform fixed4 _Color;
 		uniform float3 _cameraPosition;
@@ -49,36 +50,20 @@
 		{
 			UNITY_INITIALIZE_OUTPUT(Input, o);
 
-			o.texcoords = OffsetAlphaPackingUV(_MainTex_TexelSize.xy, v.texcoord.xy, true);// _MainTex_ST.y < 0.0);
+			o.texcoords = OffsetAlphaPackingUV(_MainTex_TexelSize.xy, v.texcoord, _MainTex_ST.y < 0.0);
 		}
 
 		void surf(Input IN, inout SurfaceOutput o) 
 		{
+				fixed4 col;
 #if USE_YPCBCR
-	#if SHADER_API_METAL || SHADER_API_GLES || SHADER_API_GLES3
-			float3 ypcbcr = float3(tex2D(_MainTex, IN.texcoords.xy).r, tex2D(_ChromaTex, IN.texcoords.xy).rg);
-	#else
-			float3 ypcbcr = float3(tex2D(_MainTex, IN.texcoords.xy).r, tex2D(_ChromaTex, IN.texcoords.xy).ra);
-	#endif
-			fixed4 col = fixed4(Convert420YpCbCr8ToRGB(ypcbcr), 1.0);
+				col = SampleYpCbCr(_MainTex, _ChromaTex, IN.texcoords.xy, _YpCbCrTransform);
 #else
-			fixed4 col = tex2D(_MainTex, IN.texcoords.xy);
+				col = SampleRGBA(_MainTex, IN.texcoords.xy);
 #endif
-#if APPLY_GAMMA
-			col.rgb = GammaToLinear(col.rgb);
-#endif
-			
+
 #if ALPHAPACK_TOP_BOTTOM | ALPHAPACK_LEFT_RIGHT
-				// Sample the alpha
-	#if USE_YPCBCR
-				col.a = tex2D(_MainTex, IN.texcoords.zw).r;
-	#else
-				fixed4 alpha = tex2D(_MainTex, IN.texcoords.zw);
-		#if APPLY_GAMMA
-				alpha.rgb = GammaToLinear(alpha.rgb);
-		#endif
-				col.a = (alpha.r + alpha.g + alpha.b) / 3.0;
-	#endif
+				col.a = SamplePackedAlpha(_MainTex, IN.texcoords.zw);
 #endif
 				col *= _Color;
 				o.Albedo = col.rgb;

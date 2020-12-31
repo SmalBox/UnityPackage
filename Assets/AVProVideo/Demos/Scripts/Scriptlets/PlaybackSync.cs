@@ -2,7 +2,7 @@
 using RenderHeads.Media.AVProVideo;
 
 //-----------------------------------------------------------------------------
-// Copyright 2015-2017 RenderHeads Ltd.  All rights reserverd.
+// Copyright 2015-2020 RenderHeads Ltd.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 namespace RenderHeads.Media.AVProVideo.Demos
@@ -80,6 +80,9 @@ namespace RenderHeads.Media.AVProVideo.Demos
 								slave.Play();
 							}
 						}
+
+						// TODO: add per-frame micropauses to get videos in sync.  This can be done with a Pause() in Update() and a Play() in LateUpdate()
+						// to slowly shift slave videos that are ahead back in sync.
 					}
 				}
 				else

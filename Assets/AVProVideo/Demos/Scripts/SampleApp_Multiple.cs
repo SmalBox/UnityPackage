@@ -9,20 +9,28 @@ using System.Collections;
 using System.Collections.Generic;
 
 //-----------------------------------------------------------------------------
-// Copyright 2015-2017 RenderHeads Ltd.  All rights reserverd.
+// Copyright 2015-2020 RenderHeads Ltd.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 namespace RenderHeads.Media.AVProVideo.Demos
 {
+	/// <summary>
+	/// A demo that shows multiple videos being loaded and displayed at once
+	/// Each time a button is pressed a new video instance is added/removed
+	/// </summary>
 	public class SampleApp_Multiple : MonoBehaviour
 	{
-		public string m_videoPath = "BigBuckBunny_360p30.mp4";
-		private int			m_NumVideosAdded = 0;
+		[SerializeField]
+		private string m_videoPath = "BigBuckBunny_360p30.mp4";
 
-		List<DisplayUGUI>	m_aAddedVideos = new List<DisplayUGUI>();
+		[SerializeField]
+		private MediaPlayer.FileLocation m_videoLocation = MediaPlayer.FileLocation.RelativeToStreamingAssetsFolder;
+
+		private int	m_NumVideosAdded = 0;
+		private List<DisplayUGUI>	m_aAddedVideos = new List<DisplayUGUI>();
 		
 
-		void Update()
+		private void Update()
 		{
 #if UNITY_ANDROID
 			// To handle 'back' button on Android devices
@@ -35,7 +43,8 @@ namespace RenderHeads.Media.AVProVideo.Demos
 			foreach( DisplayUGUI gui in m_aAddedVideos )
 			{
 				if( gui.gameObject != null && gui.gameObject.activeSelf == false && 
-					gui._mediaPlayer != null && gui._mediaPlayer.Control != null && ( gui._mediaPlayer.Control.IsPlaying() ) )
+					gui._mediaPlayer != null && gui._mediaPlayer.Control != null &&
+					gui._mediaPlayer.TextureProducer.GetTexture() != null )
 				{
 					gui.gameObject.SetActive( true );
 				}
@@ -69,7 +78,6 @@ namespace RenderHeads.Media.AVProVideo.Demos
 				}
 			}
 		}
-
 		
 		public void AddVideoClicked()
 		{
@@ -78,11 +86,8 @@ namespace RenderHeads.Media.AVProVideo.Demos
 			// New media player
 			GameObject newMediaPlayerGameObject = new GameObject( "AVPro MediaPlayer " + m_NumVideosAdded.ToString() );
 			MediaPlayer newMediaPlayer = newMediaPlayerGameObject.AddComponent<MediaPlayer>();
-			newMediaPlayer.m_VideoPath = m_videoPath;
-			newMediaPlayer.m_AutoStart = true;
 			newMediaPlayer.m_Loop = true;
-			newMediaPlayer.SetGuiPositionFromVideoIndex( m_NumVideosAdded - 1 );
-			newMediaPlayer.SetDebugGuiEnabled( m_NumVideosAdded < 5 );
+			newMediaPlayer.OpenVideoFromFile(m_videoLocation, m_videoPath, true);
 
 			// New uGUI object
 			GameObject canvasPanel = GameObject.Find("Canvas/Panel");

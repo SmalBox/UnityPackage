@@ -2,17 +2,18 @@
 using System.IO;
 
 //-----------------------------------------------------------------------------
-// Copyright 2015-2017 RenderHeads Ltd.  All rights reserverd.
+// Copyright 2015-2020 RenderHeads Ltd.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 namespace RenderHeads.Media.AVProVideo.Demos
 {
 	/// <summary>
 	/// Demonstration of how to load from a video from a byte array.
-	/// It should be noted that only Windows using DirectShow API currently supports this feature.
+	/// NOTE: Only Windows using DirectShow API currently supports this feature.
 	/// </summary> 
 	public class LoadFromBuffer : MonoBehaviour
 	{
+#if !UNITY_WEBPLAYER
 		[SerializeField]
 		private MediaPlayer _mp = null;
 
@@ -23,15 +24,7 @@ namespace RenderHeads.Media.AVProVideo.Demos
 		{
 			if (_mp != null)
 			{
-				byte[] buffer = null;
-				using (FileStream fs = new FileStream(_filename, FileMode.Open, FileAccess.Read))
-				{
-					using (BinaryReader br = new BinaryReader(fs))
-					{
-						long bufferLength = new FileInfo(_filename).Length;
-						buffer = br.ReadBytes((int)bufferLength);
-					}
-				}
+				byte[] buffer = File.ReadAllBytes(_filename);
 
 				if (buffer != null)
 				{
@@ -41,6 +34,7 @@ namespace RenderHeads.Media.AVProVideo.Demos
 
 			System.GC.Collect();
 		}
+#endif
 	}
 }
 

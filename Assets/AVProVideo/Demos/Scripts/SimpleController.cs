@@ -1,17 +1,18 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-
-//-----------------------------------------------------------------------------
-// Copyright 2015-2017 RenderHeads Ltd.  All rights reserverd.
-//-----------------------------------------------------------------------------
-
 using RenderHeads.Media.AVProVideo;
+
+//-----------------------------------------------------------------------------
+// Copyright 2015-2020 RenderHeads Ltd.  All rights reserved.
+//-----------------------------------------------------------------------------
 
 namespace RenderHeads.Media.AVProVideo.Demos
 {
 	/// <summary>
-	/// Simple GUI built using IMGUI to show scripting examples
+	/// Simple video player GUI built using IMGUI
+	/// Shows how a simple video play can be created with scripting
+	/// Includes support for fading to black when a new video is loaded
 	/// </summary>
 	public class SimpleController : MonoBehaviour
 	{
@@ -33,9 +34,14 @@ namespace RenderHeads.Media.AVProVideo.Demos
 		//private bool _seekDragStarted;
         //private bool _seekDragWasPlaying;
 
-        void Start()
+        private void Start()
 		{
 			_mediaPlayer.Events.AddListener(OnMediaPlayerEvent);
+		}
+
+		private void OnDestroy()
+		{
+			_mediaPlayer.Events.RemoveListener(OnMediaPlayerEvent);
 		}
 
 		// Callback function to handle events
@@ -50,6 +56,7 @@ namespace RenderHeads.Media.AVProVideo.Demos
 				case MediaPlayerEvent.EventType.FirstFrameReady:
 					break;
 				case MediaPlayerEvent.EventType.MetaDataReady:
+				case MediaPlayerEvent.EventType.ResolutionChanged:
 					GatherProperties();
 					break;
 				case MediaPlayerEvent.EventType.FinishedPlaying:
@@ -80,7 +87,7 @@ namespace RenderHeads.Media.AVProVideo.Demos
 			}
 		}
 
-		void Update()
+		private void Update()
 		{
 			if (!_useFading)
 			{
@@ -240,6 +247,19 @@ namespace RenderHeads.Media.AVProVideo.Demos
 					_mediaPlayer.Control.SetLooping(newLoopStatus);
 				}
 
+				// Mute
+				bool muteStatus = _mediaPlayer.m_Muted;
+				if (_mediaPlayer.Control != null)
+				{
+					muteStatus = _mediaPlayer.Control.IsMuted();
+				}
+				bool newMuteStatus = GUILayout.Toggle(muteStatus, "Mute");
+				if (newMuteStatus != muteStatus)
+				{
+					_mediaPlayer.m_Muted = newMuteStatus;
+					_mediaPlayer.Control.MuteAudio(newMuteStatus);
+				}
+
 				GUILayout.EndHorizontal();
 
 				// Timeline scrubbing (note as use int as WebGL has float == precision issues)
@@ -261,7 +281,7 @@ namespace RenderHeads.Media.AVProVideo.Demos
 				GUI.DrawTexture(bufferingRect, Texture2D.whiteTexture, ScaleMode.StretchToFill);
 				
 
-				GUI.color = Color.green;
+				GUI.color = Color.red;
 				int timeRangeCount = _mediaPlayer.Control.GetBufferedTimeRangeCount();
 				for (int i = 0; i < timeRangeCount; i++)
 				{

@@ -45,6 +45,7 @@
 			uniform sampler2D _MainTex;
 #if USE_YPCBCR
 			uniform sampler2D _ChromaTex;
+			uniform float4x4 _YpCbCrTransform;
 #endif
 			uniform float4 _MainTex_ST;
 			uniform float4 _MainTex_TexelSize;
@@ -82,34 +83,15 @@
 			fixed4 frag (v2f i) : SV_Target
 			{
 
+				fixed4 col;
 #if USE_YPCBCR
-	#if SHADER_API_METAL || SHADER_API_GLES || SHADER_API_GLES3
-				float3 ypcbcr = float3(tex2D(_MainTex, i.uv.xy).r, tex2D(_ChromaTex, i.uv.xy).rg);
-	#else
-				float3 ypcbcr = float3(tex2D(_MainTex, i.uv.xy).r, tex2D(_ChromaTex, i.uv.xy).ra);
-	#endif
-				fixed4 col = fixed4(Convert420YpCbCr8ToRGB(ypcbcr), 1.0);
+				col = SampleYpCbCr(_MainTex, _ChromaTex, i.uv.xy, _YpCbCrTransform);
 #else
-				// Sample RGB
-				fixed4 col = tex2D(_MainTex, i.uv.xy);
-#endif
-
-#if APPLY_GAMMA
-				col.rgb = GammaToLinear(col.rgb);
+				col = SampleRGBA(_MainTex, i.uv.xy);
 #endif
 
 #if ALPHAPACK_TOP_BOTTOM | ALPHAPACK_LEFT_RIGHT
-				// Sample the alpha
-
-#if USE_YPCBCR
-				col.a = tex2D(_MainTex, i.uv.zw).r;
-#else
-				fixed4 alpha = tex2D(_MainTex, i.uv.zw);
-#if APPLY_GAMMA
-				alpha.rgb = GammaToLinear(alpha.rgb);
-#endif
-				col.a = (alpha.r + alpha.g + alpha.b) / 3.0;
-#endif
+				col.a = SamplePackedAlpha(_MainTex, i.uv.zw);
 #endif
 
 				col *= _Color;

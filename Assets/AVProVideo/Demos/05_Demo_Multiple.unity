@@ -444,8 +444,6 @@ GameObject:
   m_Component:
   - 4: {fileID: 1348342168}
   - 20: {fileID: 1348342167}
-  - 92: {fileID: 1348342166}
-  - 124: {fileID: 1348342165}
   - 81: {fileID: 1348342164}
   m_Layer: 0
   m_Name: Main Camera
@@ -456,20 +454,6 @@ GameObject:
   m_IsActive: 1
 --- !u!81 &1348342164
 AudioListener:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 1348342162}
-  m_Enabled: 1
---- !u!124 &1348342165
-Behaviour:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 1348342162}
-  m_Enabled: 1
---- !u!92 &1348342166
-Behaviour:
   m_ObjectHideFlags: 0
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
@@ -591,6 +575,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_videoPath: AVProVideoSamples/BigBuckBunny_360p30.mp4
+  m_videoLocation: 2
 --- !u!4 &1608525750
 Transform:
   m_ObjectHideFlags: 0

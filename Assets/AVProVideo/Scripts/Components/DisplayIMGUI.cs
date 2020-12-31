@@ -12,18 +12,24 @@
 using UnityEngine;
 
 //-----------------------------------------------------------------------------
-// Copyright 2015-2017 RenderHeads Ltd.  All rights reserverd.
+// Copyright 2015-2020 RenderHeads Ltd.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 namespace RenderHeads.Media.AVProVideo
 {
+	/// <summary>
+	/// Displays the video from MediaPlayer component using IMGUI
+	/// </summary>
 	[AddComponentMenu("AVPro Video/Display IMGUI", 200)]
 #if UNITY_HELPATTRIB
-	[HelpURL("http://renderheads.com/product/avpro-video/")]
+	[HelpURL("http://renderheads.com/products/avpro-video/")]
 #endif
 	[ExecuteInEditMode]
 	public class DisplayIMGUI : MonoBehaviour
 	{
+		private const string PropChromaTexName = "_ChromaTex";
+		private const string PropYpCbCrTransformName = "_YpCbCrTransform";
+
 		public MediaPlayer	_mediaPlayer;
 
 		public bool			_displayInEditor = true;
@@ -48,6 +54,8 @@ namespace RenderHeads.Media.AVProVideo
 		private static int		_propAlphaPack;
 		private static int		_propVertScale;
 		private static int		_propApplyGamma;
+		private static int		_propChromaTex;
+		private static int		_propYpCbCrTransform;
 		private static Shader	_shaderAlphaPacking;
 		private Material		_material;
 
@@ -58,6 +66,8 @@ namespace RenderHeads.Media.AVProVideo
 				_propAlphaPack = Shader.PropertyToID("AlphaPack");
 				_propVertScale = Shader.PropertyToID("_VertScale");
 				_propApplyGamma = Shader.PropertyToID("_ApplyGamma");
+				_propChromaTex = Shader.PropertyToID(PropChromaTexName);
+				_propYpCbCrTransform = Shader.PropertyToID(PropYpCbCrTransformName);
 			}
 		}
 
@@ -111,7 +121,7 @@ namespace RenderHeads.Media.AVProVideo
 			if (result == null && _mediaPlayer.Info != null)
 			{
 				// If the player does support generating sRGB textures then we need to use a shader to convert them for display via IMGUI
-				if (QualitySettings.activeColorSpace == ColorSpace.Linear && _mediaPlayer.Info.PlayerSupportsLinearColorSpace())
+				if (QualitySettings.activeColorSpace == ColorSpace.Linear && !_mediaPlayer.Info.PlayerSupportsLinearColorSpace())
 				{
 					result = _shaderAlphaPacking;
 				}
@@ -171,7 +181,7 @@ namespace RenderHeads.Media.AVProVideo
 					// Apply gamma
 					if (_material.HasProperty(_propApplyGamma) && _mediaPlayer.Info != null)
 					{
-						Helper.SetupGammaMaterial(_material, !_mediaPlayer.Info.PlayerSupportsLinearColorSpace());
+						Helper.SetupGammaMaterial(_material, _mediaPlayer.Info.PlayerSupportsLinearColorSpace());
 					}
 #else
 					_propApplyGamma |= 0;
@@ -226,17 +236,29 @@ namespace RenderHeads.Media.AVProVideo
 
 			if (_mediaPlayer.TextureProducer != null)
 			{
-				if ((_mediaPlayer.m_Resample ? _mediaPlayer.FrameResampler.OutputTexture[0] : _mediaPlayer.TextureProducer.GetTexture()) != null)
+				if (_mediaPlayer.m_Resample)
 				{
-					texture = _mediaPlayer.m_Resample ? _mediaPlayer.FrameResampler.OutputTexture[0] : _mediaPlayer.TextureProducer.GetTexture();
-					requiresVerticalFlip = _mediaPlayer.TextureProducer.RequiresVerticalFlip();
+					if (_mediaPlayer.FrameResampler.OutputTexture != null && _mediaPlayer.FrameResampler.OutputTexture[0] != null)
+					{
+						texture = _mediaPlayer.FrameResampler.OutputTexture[0];
+						requiresVerticalFlip = _mediaPlayer.TextureProducer.RequiresVerticalFlip();
+					}
+				}
+				else
+				{
+					if (_mediaPlayer.TextureProducer.GetTexture() != null)
+					{
+						texture = _mediaPlayer.TextureProducer.GetTexture();
+						requiresVerticalFlip = _mediaPlayer.TextureProducer.RequiresVerticalFlip();
+					}
 				}
 
 				if (_mediaPlayer.TextureProducer.GetTextureCount() == 2 && _material != null)
 				{
 					Texture resamplerTex = _mediaPlayer.FrameResampler == null || _mediaPlayer.FrameResampler.OutputTexture == null ? null : _mediaPlayer.FrameResampler.OutputTexture[1];
 					Texture chroma = _mediaPlayer.m_Resample ? resamplerTex : _mediaPlayer.TextureProducer.GetTexture(1);
-					_material.SetTexture("_ChromaTex", chroma);
+					_material.SetTexture(_propChromaTex, chroma);
+					_material.SetMatrix(_propYpCbCrTransform, _mediaPlayer.TextureProducer.GetYpCbCrTransform());
 					_material.EnableKeyword("USE_YPCBCR");
 				}
 			}
@@ -260,7 +282,23 @@ namespace RenderHeads.Media.AVProVideo
 						{
 							_material.SetFloat(_propVertScale, 1f);
 						}
+
+#if UNITY_EDITOR_WIN || (!UNITY_EDITOR && UNITY_STANDALONE_WIN)
+						if (QualitySettings.activeColorSpace == ColorSpace.Linear && !GL.sRGBWrite)
+						{
+							// It seems that Graphics.Draw texture behaves differently than GUI.DrawTexture when it comes to sRGB writing
+							// on newer versions of Unity (at least 2018.2.19 and above), so now we have to force the conversion to sRGB on writing
+							GL.sRGBWrite = true;
+							Helper.DrawTexture(rect, texture, _scaleMode, _mediaPlayer.m_AlphaPacking, _material);
+							GL.sRGBWrite = false;
+						}
+						else
+						{
+							Helper.DrawTexture(rect, texture, _scaleMode, _mediaPlayer.m_AlphaPacking, _material);
+						}
+#else
 						Helper.DrawTexture(rect, texture, _scaleMode, _mediaPlayer.m_AlphaPacking, _material);
+#endif
 					}
 					else
 					{

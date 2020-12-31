@@ -33,6 +33,7 @@
 		uniform sampler2D _MainTex;
 #if USE_YPCBCR
 		uniform sampler2D _ChromaTex;
+		uniform float4x4 _YpCbCrTransform;
 #endif
 		uniform fixed4 _Color;
 		uniform float3 _cameraPosition;
@@ -40,9 +41,7 @@
 		struct Input 
 		{
 			float2 uv_MainTex;
-#if STEREO_DEBUG
 			float4 color;
-#endif
 		};
 
 		void VertexFunction(inout appdata_full v, out Input o)
@@ -50,7 +49,7 @@
 			UNITY_INITIALIZE_OUTPUT(Input, o);
 
 #if STEREO_TOP_BOTTOM | STEREO_LEFT_RIGHT
-			float4 scaleOffset = GetStereoScaleOffset(IsStereoEyeLeft(_cameraPosition, UNITY_MATRIX_V[0].xyz));
+			float4 scaleOffset = GetStereoScaleOffset(IsStereoEyeLeft(_cameraPosition, UNITY_MATRIX_V[0].xyz), true);
 			o.uv_MainTex = v.texcoord.xy *= scaleOffset.xy;
 			o.uv_MainTex = v.texcoord.xy += scaleOffset.zw;
 #elif STEREO_CUSTOM_UV
@@ -60,30 +59,21 @@
 				o.uv_MainTex = v.texcoord1.xy;
 			}
 #endif
-
+			o.color = _Color;
 #if STEREO_DEBUG
-			o.color = GetStereoDebugTint(IsStereoEyeLeft(_cameraPosition, UNITY_MATRIX_V[0].xyz));
+			o.color *= GetStereoDebugTint(IsStereoEyeLeft(_cameraPosition, UNITY_MATRIX_V[0].xyz));
 #endif
 		}
 
 		void surf(Input IN, inout SurfaceOutput o) 
 		{
+				fixed4 c;
 #if USE_YPCBCR
-	#if SHADER_API_METAL || SHADER_API_GLES || SHADER_API_GLES3
-			float3 ypcbcr = float3(tex2D(_MainTex, IN.uv_MainTex).r, tex2D(_ChromaTex, IN.uv_MainTex).rg);
-	#else
-			float3 ypcbcr = float3(tex2D(_MainTex, IN.uv_MainTex).r, tex2D(_ChromaTex, IN.uv_MainTex).ra);
-	#endif
-			fixed4 c = fixed4(Convert420YpCbCr8ToRGB(ypcbcr), 1.0);
+				c = SampleYpCbCr(_MainTex, _ChromaTex, IN.uv_MainTex, _YpCbCrTransform);
 #else
-			fixed4 c = tex2D(_MainTex, IN.uv_MainTex) * _Color;
+				c = SampleRGBA(_MainTex, IN.uv_MainTex);
 #endif
-#if APPLY_GAMMA
-			c.rgb = GammaToLinear(c.rgb);
-#endif			
-#if STEREO_DEBUG
 			c *= IN.color;
-#endif
 			o.Albedo = c.rgb;
 			o.Alpha = c.a;
 		}

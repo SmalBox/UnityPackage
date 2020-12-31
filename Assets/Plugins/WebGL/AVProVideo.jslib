@@ -1,14 +1,14 @@
 var AVProVideoWebGL = {
-    isNumber: function (item) {
+    /*isNumber: function (item) {
         return typeof(item) === "number" && !isNaN(item);
     },
     assert: function (equality, message) {
         if (!equality)
             console.log(message);
-    },
+    },*/
     count: 0,
     videos: [],
-    hasVideos__deps: ["count", "videos"],
+    hasVideos__deps: ["videos"],
     hasVideos: function (videoIndex) {
         if (videoIndex) {
             if (videoIndex == -1) {
@@ -30,16 +30,50 @@ var AVProVideoWebGL = {
 
         return false;
     },
-    AVPPlayerInsertVideoElement__deps: ["count", "videos", "hasVideos"],
-    AVPPlayerInsertVideoElement: function (path, idValues) {
+    AVPPlayerInsertVideoElement__deps: ["count", "videos"],
+    AVPPlayerInsertVideoElement: function (path, idValues, externalLibrary) {
         if (!path) {
             return false;
         }
 
+        // NOTE: When loading from the indexedDB (Application.persistantDataPath), 
+        //       URL.createObjectURL() must be used get a valid URL.  See:
+        //       http://www.misfitgeek.com/html5-off-line-storing-and-retrieving-videos-with-indexeddb/
         path = Pointer_stringify(path);
         _count++;
 
         var vid = document.createElement("video");
+        var useNativeSrcPath = true;
+
+        var url = path.split('/').pop().replace(/\#(.*?)$/, '').replace(/\?(.*?)$/, '');
+        url = url.split('.');  // separates filename and extension
+
+        if (externalLibrary == 1 && url[1] == "mpd")
+        {
+            useNativeSrcPath = false;
+            var player = dashjs.MediaPlayer().create();
+            player.initialize(vid, path, true);
+        }
+        else if (externalLibrary == 2)
+        {
+            useNativeSrcPath = false;
+            var hls = new Hls();
+            hls.loadSource(path);
+            hls.attachMedia(vid);
+            hls.on(Hls.Events.MANIFEST_PARSED,function() 
+            {
+                //video.play();
+            });
+        }
+        else if (externalLibrary == 3)
+        {
+            //useNativeSrcPath = false;
+        }
+
+		// Some sources say that this is the proper way to catch errors...
+		/*vid.addEventListener('error', function(event) {
+			console.log("Error: " + event);
+		}, true);*/
 
         var hasSetCanPlay = false;
         var playerIndex;
@@ -50,7 +84,9 @@ var AVProVideoWebGL = {
             video: vid,
             ready: false,
             hasMetadata: false,
-            buffering: false
+            isStalled: false,
+            buffering: false,
+            lastErrorCode: 0
         };
 
         _videos.push(vidData);
@@ -61,6 +97,7 @@ var AVProVideoWebGL = {
                 hasSetCanPlay = true;
                 vidData.ready = true;
             }
+            //console.log("ONCANPLAY");
         };
 
         vid.onloadedmetadata = function () {
@@ -69,26 +106,39 @@ var AVProVideoWebGL = {
 
         vid.oncanplaythrough = function () {
             vidData.buffering = false;
+            //console.log("CANPLAYTHROUGH");
         };
 
         vid.onplaying = function () {
-            // buffering
-            this.buffering = false;
+            vidData.buffering = false;
+            vidData.isStalled = false;
+            //console.log("PLAYING");
         };
 
         vid.onwaiting = function () {
             vidData.buffering = true;
+            //console.log("WAITING");
         };
+
+        vid.onstalled = function () {
+            vidData.isStalled = true;
+            //console.log("STALLED");
+        }
 
         /*vid.onpause = function () {
-        };
-
-        vid.onended = function () {
         };*/
 
-        /*vid.ontimeupdate = function() {
-         //console.log("vid current time: ", this.currentTime);
-         };*/
+        vid.onended = function () {
+            vidData.buffering = false;
+            vidData.isStalled = false;
+            //console.log("ENDED");
+        };
+
+        vid.ontimeupdate = function() {
+            vidData.buffering = false;
+            vidData.isStalled = false;
+            //console.log("vid current time: ", this.currentTime);
+        };
 
         vid.onerror = function (texture) {
             var err = "unknown error";
@@ -108,27 +158,54 @@ var AVProVideoWebGL = {
                     break;
             }
 
+            vidData.lastErrorCode = vid.error.code;
+
             console.log("Error: " + err + " (errorcode=" + vid.error.code + ")", "color:red;");
         };
 
         vid.crossOrigin = "anonymous";
-        vid.src = path;
+        vid.autoplay = false;
+        if (useNativeSrcPath)
+        {
+            vid.src = path;
+        }
 
 		HEAP32[(idValues>>2)] = playerIndex;
 		HEAP32[(idValues>>2)+1] = id;
 
 		return true;
     },
+    AVPPlayerGetLastError__deps: ["videos", "hasVideos"],
+    AVPPlayerGetLastError: function(playerIndex){
+        if(!_hasVideos(playerIndex))
+        {
+            return 0;
+        }
+
+        var ret = _videos[playerIndex].lastErrorCode
+        _videos[playerIndex].lastErrorCode = 0;
+
+        return ret;
+    },
     AVPPlayerFetchVideoTexture__deps: ["videos", "hasVideos"],
-    AVPPlayerFetchVideoTexture: function (playerIndex, texture) {
+    AVPPlayerFetchVideoTexture: function (playerIndex, texture, init) {
         if (!_hasVideos(playerIndex)) {
             return;
         }
 
         GLctx.bindTexture(GLctx.TEXTURE_2D, GL.textures[texture]);
-
-        GLctx.texSubImage2D(GLctx.TEXTURE_2D, 0, 0, 0, GLctx.RGBA, GLctx.UNSIGNED_BYTE, _videos[playerIndex].video);
-    },
+        if (!init)
+        {
+        	GLctx.texSubImage2D(GLctx.TEXTURE_2D, 0, 0, 0, GLctx.RGBA, GLctx.UNSIGNED_BYTE, _videos[playerIndex].video);
+        }
+        else
+		{
+        	GLctx.texImage2D(GLctx.TEXTURE_2D, 0, GLctx.RGBA, GLctx.RGBA, GLctx.UNSIGNED_BYTE, _videos[playerIndex].video);
+        }
+		
+        //NB: This line causes the texture to not show unless something else is rendered (not sure why)
+		//GLctx.bindTexture(GLctx.TEXTURE_2D, null);
+	},
     AVPPlayerUpdatePlayerIndex__deps: ["videos", "hasVideos"],
     AVPPlayerUpdatePlayerIndex: function (id) {
         var result = -1;
@@ -278,13 +355,41 @@ var AVProVideoWebGL = {
 
         return _videos[playerIndex].buffering;
     },
-    AVPPlayerPlay__deps: ["videos", "hasVideos"],
-    AVPPlayerPlay: function (playerIndex) {
+    AVPPlayerIsPlaybackStalled__deps: ["videos", "hasVideos"],
+    AVPPlayerIsPlaybackStalled: function (playerIndex) {
         if (!_hasVideos(playerIndex)) {
-            return;
+            return false;
         }
 
-        _videos[playerIndex].video.play();
+        return _videos[playerIndex].isStalled;
+    },
+    AVPPlayerPlay__deps: ["videos", "hasVideos", "AVPPlayerIsMuted", "AVPPlayerSetMuted", "AVPPlayerPlay"],
+    AVPPlayerPlay: function (playerIndex) {
+        if (!_hasVideos(playerIndex)) {
+            return false;
+        }
+
+		// https://webkit.org/blog/7734/auto-play-policy-changes-for-macos/
+		// https://developers.google.com/web/updates/2017/06/play-request-was-interrupted
+        var playPromise = _videos[playerIndex].video.play();
+		if (playPromise !== undefined) 
+		{
+			playPromise.then(function() {
+			  // Automatic playback started!
+			  // Show playing UI.
+			 })
+			 .catch(function(error) {
+			  // Auto-play was prevented
+			  // Show paused UI.
+			  if (!_AVPPlayerIsMuted(playerIndex))
+			  {
+			  	console.error("[AVProVideo] Video refused to start playback - check your browser permission settings as videos that contain audio can be blocked by default.  Muting video and attempting playback again.");
+			  	_AVPPlayerSetMuted(playerIndex, true);
+			  	_AVPPlayerPlay(playerIndex);
+			  }
+			});
+		}
+		return true;
     },
     AVPPlayerPause__deps: ["videos", "hasVideos"],
     AVPPlayerPause: function (playerIndex) {
@@ -318,7 +423,7 @@ var AVProVideoWebGL = {
     AVPPlayerGetCurrentTime__deps: ["videos", "hasVideos"],
     AVPPlayerGetCurrentTime: function (playerIndex) {
         if (!_hasVideos(playerIndex)) {
-            return 0;
+            return 0.0;
         }
 
         return _videos[playerIndex].video.currentTime;
@@ -326,7 +431,7 @@ var AVProVideoWebGL = {
     AVPPlayerGetPlaybackRate__deps: ["videos", "hasVideos"],
     AVPPlayerGetPlaybackRate: function (playerIndex) {
         if (!_hasVideos(playerIndex)) {
-            return 0;
+            return 0.0;
         }
 
         return _videos[playerIndex].video.playbackRate;
@@ -350,7 +455,7 @@ var AVProVideoWebGL = {
     AVPPlayerGetDuration__deps: ["videos", "hasVideos"],
     AVPPlayerGetDuration: function (playerIndex) {
         if (!_hasVideos(playerIndex)) {
-            return 0;
+            return 0.0;
         }
 
         return _videos[playerIndex].video.duration;
@@ -374,7 +479,7 @@ var AVProVideoWebGL = {
     AVPPlayerGetVolume__deps: ["videos", "hasVideos"],
     AVPPlayerGetVolume: function (playerIndex) {
         if (!_hasVideos(playerIndex)) {
-            return 0;
+            return 0.0;
         }
 
         return _videos[playerIndex].video.volume;
@@ -408,7 +513,7 @@ var AVProVideoWebGL = {
     AVPPlayerAudioTrackCount__deps: ["videos", "hasVideos"],
     AVPPlayerAudioTrackCount: function (playerIndex) {
     	if (!_hasVideos(playerIndex)) {
-    		return false;
+    		return 0;
     	}
     	var result = 0;
     	if (_videos[playerIndex].video.audioTracks)
@@ -417,6 +522,7 @@ var AVProVideoWebGL = {
     	}
     	return result;
     },
+    AVPPlayerSetAudioTrack__deps: ["videos", "hasVideos"],
     AVPPlayerSetAudioTrack: function (playerIndex, trackIndex) {
     	if (!_hasVideos(playerIndex)) {
     		return;
@@ -428,14 +534,14 @@ var AVProVideoWebGL = {
     		}
     	}
     },
-    AVPPlayerGetDecodedFrameCount__deps: ["videos, hasVideos"],
+    AVPPlayerGetDecodedFrameCount__deps: ["videos", "hasVideos"],
     AVPPlayerGetDecodedFrameCount: function (playerIndex) {
         if (!_hasVideos(playerIndex)) {
             return 0;
         }
 
         var vid = _videos[playerIndex].video;
-        if (vid.readyState <= HTMLMediaElement.HAVE_CURRENT_DATA || vid.paused) {
+        if (vid.readyState <= HTMLMediaElement.HAVE_CURRENT_DATA) {
             return 0;
         }
 
@@ -452,7 +558,26 @@ var AVProVideoWebGL = {
 
         return frameCount;
     },
-    AVPPlayerGetNumBufferedTimeRanges__deps: ["videos, hasVideos"],
+    AVPPlayerSupportedDecodedFrameCount__deps: ["videos", "hasVideos"],
+    AVPPlayerSupportedDecodedFrameCount: function (playerIndex) {
+        if (!_hasVideos(playerIndex)) {
+            return false;
+        }
+
+        var vid = _videos[playerIndex].video;
+
+        if (vid.webkitDecodedFrameCount)
+        {
+        	return true;
+        }
+        else if (vid.mozDecodedFrames)
+        {
+        	return true;
+        }
+
+        return false;
+    },    
+    AVPPlayerGetNumBufferedTimeRanges__deps: ["videos", "hasVideos"],
     AVPPlayerGetNumBufferedTimeRanges: function(playerIndex){   
         if (!_hasVideos(playerIndex)) {
             return 0;
@@ -460,26 +585,26 @@ var AVProVideoWebGL = {
 
         return _videos[playerIndex].video.buffered.length;
     },
-    AVPPlayerGetTimeRangeStart__deps: ["videos, hasVideos"],
+    AVPPlayerGetTimeRangeStart__deps: ["videos", "hasVideos"],
     AVPPlayerGetTimeRangeStart: function(playerIndex, rangeIndex){
         if (!_hasVideos(playerIndex)) {
-            return 0;
+            return 0.0;
         }
 
         if(rangeIndex >= _videos[playerIndex].video.buffered.length){
-            return 0;
+            return 0.0;
         }
 
         return _videos[playerIndex].video.buffered.start(rangeIndex);
     },
-    AVPPlayerGetTimeRangeEnd__deps: ["videos, hasVideos"],
+    AVPPlayerGetTimeRangeEnd__deps: ["videos", "hasVideos"],
     AVPPlayerGetTimeRangeEnd: function(playerIndex, rangeIndex){
         if (!_hasVideos(playerIndex)) {
-            return 0;
+            return 0.0;
         }
 
         if(rangeIndex >= _videos[playerIndex].video.buffered.length){
-            return 0;
+            return 0.0;
         }
 
         return _videos[playerIndex].video.buffered.end(rangeIndex);

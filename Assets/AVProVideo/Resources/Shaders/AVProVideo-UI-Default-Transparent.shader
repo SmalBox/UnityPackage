@@ -1,5 +1,3 @@
-// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
 Shader "AVProVideo/UI/Transparent Packed"
 {
 	Properties
@@ -84,7 +82,7 @@ Shader "AVProVideo/UI/Transparent Packed"
 			{
 				float4 vertex   : SV_POSITION;
 				fixed4 color    : COLOR;
-				half4 texcoord  : TEXCOORD0;
+				half4 uv  : TEXCOORD0;
 				float4 worldPosition : TEXCOORD1;
 			};
 			
@@ -92,6 +90,7 @@ Shader "AVProVideo/UI/Transparent Packed"
 			uniform sampler2D _MainTex;
 #if USE_YPCBCR
 			uniform sampler2D _ChromaTex;
+			uniform float4x4 _YpCbCrTransform;
 #endif
 			uniform float4 _MainTex_TexelSize;
 			uniform float _VertScale;
@@ -110,63 +109,46 @@ Shader "AVProVideo/UI/Transparent Packed"
 				v2f OUT;
 				OUT.worldPosition = IN.vertex;
 
-				OUT.vertex = UnityObjectToClipPos(IN.vertex);
+				OUT.vertex = XFormObjectToClip(IN.vertex);
 
 #ifdef UNITY_HALF_TEXEL_OFFSET
 				OUT.vertex.xy += (_ScreenParams.zw-1.0)*float2(-1,1);
 #endif
 
-				OUT.texcoord.xy = IN.texcoord.xy;
+				OUT.uv.xy = IN.texcoord.xy;
 
 				// Horrible hack to undo the scale transform to fit into our UV packing layout logic...
 				if (_VertScale < 0.0)
 				{
-					OUT.texcoord.y = 1.0 - OUT.texcoord.y;
+					OUT.uv.y = 1.0 - OUT.uv.y;
 				}
 
-				OUT.texcoord = OffsetAlphaPackingUV(_MainTex_TexelSize.xy, OUT.texcoord.xy, _VertScale < 0.0);
+				OUT.uv = OffsetAlphaPackingUV(_MainTex_TexelSize.xy, OUT.uv.xy, _VertScale < 0.0);
 
 				OUT.color = IN.color * _Color;
 				return OUT;
 			}
 
-			fixed4 frag(v2f IN) : SV_Target
+			fixed4 frag(v2f i) : SV_Target
 			{
+				fixed4 col;
 #if USE_YPCBCR
-	#if SHADER_API_METAL || SHADER_API_GLES || SHADER_API_GLES3
-				float3 ypcbcr = float3(tex2D(_MainTex, IN.texcoord.xy).r, tex2D(_ChromaTex, IN.texcoord.xy).rg);
-	#else
-				float3 ypcbcr = float3(tex2D(_MainTex, IN.texcoord.xy).r, tex2D(_ChromaTex, IN.texcoord.xy).ra);
-	#endif
-				half4 color = half4(Convert420YpCbCr8ToRGB(ypcbcr), 1.0);
+				col = SampleYpCbCr(_MainTex, _ChromaTex, i.uv.xy, _YpCbCrTransform);
 #else
-				// Sample RGB
-				half4 color = tex2D(_MainTex, IN.texcoord.xy);
-#endif
-#if APPLY_GAMMA
-				color.rgb = GammaToLinear(color.rgb);
+				col = SampleRGBA(_MainTex, i.uv.xy);
 #endif
 
 #if ALPHAPACK_TOP_BOTTOM | ALPHAPACK_LEFT_RIGHT
-	#if USE_YPCBCR
-				color.a = tex2D(_MainTex, IN.texcoord.zw).r;
-	#else
-				// Sample the alpha
-				half4 alpha = tex2D(_MainTex, IN.texcoord.zw);
-		#if APPLY_GAMMA
-				alpha.rgb = GammaToLinear(alpha.rgb);
-		#endif
-				color.a = (alpha.r + alpha.g + alpha.b) / 3.0;
-	#endif
+				col.a = SamplePackedAlpha(_MainTex, i.uv.zw);
 #endif
-				color *= IN.color;
+				col *= i.color;
 				
 #if UNITY_VERSION >= 520
-				color.a *= UnityGet2DClipping(IN.worldPosition.xy, _ClipRect);
+				col.a *= UnityGet2DClipping(i.worldPosition.xy, _ClipRect);
 #endif
-				clip(color.a - 0.001);
+				clip(col.a - 0.001);
 
-				return color;
+				return col;
 			}
 
 		ENDCG

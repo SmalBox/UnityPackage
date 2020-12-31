@@ -4,11 +4,14 @@ using System.Runtime.InteropServices;
 using System;
 
 //-----------------------------------------------------------------------------
-// Copyright 2015-2017 RenderHeads Ltd.  All rights reserverd.
+// Copyright 2015-2020 RenderHeads Ltd.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 namespace RenderHeads.Media.AVProVideo
 {
+	/// <summary>
+	/// WebGL implementation of BaseMediaPlayer
+	/// </summary>
     public sealed class WebGLMediaPlayer : BaseMediaPlayer
     {
 		//private enum AVPPlayerStatus
@@ -22,7 +25,7 @@ namespace RenderHeads.Media.AVProVideo
 		//}
 
 		[DllImport("__Internal")]
-		private static extern bool AVPPlayerInsertVideoElement(string path, int[] idValues);
+		private static extern bool AVPPlayerInsertVideoElement(string path, int[] idValues, int externalLibrary);
 
         [DllImport("__Internal")]
         private static extern int AVPPlayerWidth(int player);
@@ -30,14 +33,14 @@ namespace RenderHeads.Media.AVProVideo
         [DllImport("__Internal")]
         private static extern int AVPPlayerHeight(int player);
 
+		[DllImport("__Internal")]
+		private static extern int AVPPlayerGetLastError(int player);
+
         [DllImport("__Internal")]
         private static extern int AVPPlayerAudioTrackCount(int player);
 
 		[DllImport("__Internal")]
 		private static extern bool AVPPlayerSetAudioTrack(int player, int index);
-
-		[DllImport("__Internal")]
-        private static extern bool AVPPlayerOpenFile(int player, string path);
 
         [DllImport("__Internal")]
         private static extern void AVPPlayerClose(int player);
@@ -67,7 +70,10 @@ namespace RenderHeads.Media.AVProVideo
         private static extern bool AVPPlayerIsBuffering(int player);
 
         [DllImport("__Internal")]
-        private static extern void AVPPlayerPlay(int player);
+        private static extern bool AVPPlayerIsPlaybackStalled(int player);
+
+        [DllImport("__Internal")]
+        private static extern bool AVPPlayerPlay(int player);
 
         [DllImport("__Internal")]
         private static extern void AVPPlayerPause(int player);
@@ -105,12 +111,15 @@ namespace RenderHeads.Media.AVProVideo
         [DllImport("__Internal")]
         private static extern bool AVPPlayerHasAudio(int player);
 
-        // Need jslib
-        [DllImport("__Internal")]
-        private static extern void AVPPlayerFetchVideoTexture(int player, IntPtr texture);
+		// Need jslib
+		[DllImport("__Internal")]
+        private static extern void AVPPlayerFetchVideoTexture(int player, IntPtr texture, bool init);
 
         [DllImport("__Internal")]
         private static extern int AVPPlayerGetDecodedFrameCount(int player);
+
+        [DllImport("__Internal")]
+        private static extern bool AVPPlayerSupportedDecodedFrameCount(int player);
 
         [DllImport("__Internal")]
         private static extern bool AVPPlayerHasMetadata(int player);
@@ -126,37 +135,57 @@ namespace RenderHeads.Media.AVProVideo
 		[DllImport("__Internal")]
 		private static extern float AVPPlayerGetTimeRangeEnd(int id, int timeRangeIndex);
 
+        private WebGL.ExternalLibrary _externalLibrary = WebGL.ExternalLibrary.None;
 		private int _playerIndex = -1;
         private int _playerID = -1;
-        private Texture2D _texture = null;
+        private RenderTexture _texture = null;
         private int _width = 0;
         private int _height = 0;
 		private int _audioTrackCount = 0;
 		private int _audioTrackIndex = 0;
+        private bool _useTextureMips = false;
 		private System.IntPtr _cachedTextureNativePtr = System.IntPtr.Zero;
 
 		private int _lastFrameCount = 0;
 		private float _displayRateTimer = 0f;
 		private float _displayRate = 0f;
 
+        private static bool _isWebGL1 = false;
+
 		public static void InitialisePlatform()
         {
+            _isWebGL1 = (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.OpenGLES2);
+        }
+
+		public WebGLMediaPlayer(WebGL.ExternalLibrary externalLibrary, bool useTextureMips)
+		{
+			SetOptions(externalLibrary, useTextureMips);
+		}
+
+        public void SetOptions(WebGL.ExternalLibrary externalLibrary, bool useTextureMips)
+        {
+            _externalLibrary = externalLibrary;
+            _useTextureMips = useTextureMips;
         }
 
         public override string GetVersion()
         {
-			return "1.5.22";
+			return "1.9.17";
 		}
 
-        public override bool OpenVideoFromFile(string path, long offset, string httpHeaderJson)
+        public override bool OpenVideoFromFile(string path, long offset, string httpHeaderJson, uint sourceSamplerate = 0, uint sourceChannels = 0, int forceFileFormat = 0)
         {
             bool result = false;
 
-            if (path.StartsWith("http://") || path.StartsWith("https://") || path.StartsWith("file://"))
+            if (path.StartsWith("http://") || 
+				path.StartsWith("https://") ||
+				path.StartsWith("file://") ||
+                path.StartsWith("blob:") ||
+				path.StartsWith("chrome-extension://"))
             {
 				int[] idValues = new int[2];
 				idValues[0] = -1;
-				AVPPlayerInsertVideoElement(path, idValues);
+				AVPPlayerInsertVideoElement(path, idValues, (int)_externalLibrary);
 				{
 					int playerIndex = idValues[0];
 					_playerID = idValues[1];
@@ -167,13 +196,17 @@ namespace RenderHeads.Media.AVProVideo
 						result = true;
 					}				
 				}
-            }
+			}
+			else
+			{
+				Debug.LogError("[AVProVideo] Unknown URL protocol");
+			}
 
-            return result;
-        }
+			return result;
+		}
 
-        public override void CloseVideo()
-        {
+		public override void CloseVideo()
+		{
 			if (_playerIndex != -1)
 			{
 				Pause();
@@ -190,12 +223,14 @@ namespace RenderHeads.Media.AVProVideo
 					// Have to update with zero to release Metal textures!
 					//_texture.UpdateExternalTexture(0);
 					_cachedTextureNativePtr = System.IntPtr.Zero;
-					Texture2D.Destroy(_texture);
+					RenderTexture.Destroy(_texture);
 					_texture = null;
 				}
 
 				_playerIndex = -1;
 				_playerID = -1;
+
+                base.CloseVideo();
 			}
         }
 
@@ -275,7 +310,10 @@ namespace RenderHeads.Media.AVProVideo
         {
             Debug.Assert(_playerIndex != -1, "no player Play");
 
-            AVPPlayerPlay(_playerIndex);
+            if (!AVPPlayerPlay(_playerIndex))
+			{
+				Debug.LogWarning("[AVProVideo] Browser permission prevented video playback");
+			}
         }
 
         public override void Pause()
@@ -292,24 +330,17 @@ namespace RenderHeads.Media.AVProVideo
             AVPPlayerPause(_playerIndex);
         }
 
-        public override void Rewind()
-        {
-            Debug.Assert(_playerIndex != -1, "no player Rewind");
-
-            AVPPlayerSeekToTime(_playerIndex, 0.0f, true);
-        }
-
         public override void Seek(float ms)
         {
             Debug.Assert(_playerIndex != -1, "no player Seek");
-
+			_isSeekingStarted = true;
             AVPPlayerSeekToTime(_playerIndex, ms * 0.001f, false);
         }
 
         public override void SeekFast(float ms)
         {
             Debug.Assert(_playerIndex != -1, "no player SeekFast");
-
+			_isSeekingStarted = true;
             AVPPlayerSeekToTime(_playerIndex, ms * 0.001f, true);
         }
 
@@ -332,7 +363,7 @@ namespace RenderHeads.Media.AVProVideo
             Debug.Assert(_playerIndex != -1, "no player SetPlaybackRate");
 
 			// No HTML implementations allow negative rate yet
-			rate = Mathf.Max(0f, rate);
+			rate = Mathf.Clamp(rate, 0.25f, 8f);
 
             AVPPlayerSetPlaybackRate(_playerIndex, rate);
         }
@@ -475,6 +506,18 @@ namespace RenderHeads.Media.AVProVideo
             return result;
         }
 
+        public override bool SupportsTextureFrameCount()
+        {
+            bool result = false;
+
+            if (_playerIndex != -1)
+            {
+                result = AVPPlayerSupportedDecodedFrameCount(_playerIndex);
+            }
+
+            return result;
+        }        
+
         public override bool RequiresVerticalFlip()
         {
 			return true;
@@ -525,6 +568,31 @@ namespace RenderHeads.Media.AVProVideo
             
         }
 
+		private void UpdateLastErrorCode()
+		{
+			var code = AVPPlayerGetLastError(_playerIndex);
+
+			switch(code){
+				case 0:
+					_lastError = ErrorCode.None;
+					break;
+				case 1:
+					_lastError = ErrorCode.LoadFailed;
+					break;
+				case 2:
+					_lastError = ErrorCode.LoadFailed;
+					break;
+				case 3:
+					_lastError = ErrorCode.DecodeFailed;
+					break;
+				case 4:
+					_lastError = ErrorCode.LoadFailed;
+					break;
+				default:
+					break;
+			}
+		}
+
         public override void Update()
         {
             if(_playerID > -1) // CheckPlayer's index and update it
@@ -536,6 +604,8 @@ namespace RenderHeads.Media.AVProVideo
             {
 				UpdateSubtitles();
 
+				UpdateLastErrorCode();
+
 				if (AVPPlayerReady(_playerIndex))
                 {
 					if (AVPPlayerHasVideo(_playerIndex))
@@ -543,26 +613,64 @@ namespace RenderHeads.Media.AVProVideo
 						_width = AVPPlayerWidth(_playerIndex);
 						_height = AVPPlayerHeight(_playerIndex);
 
-						if (_texture == null)
+						if (_texture == null && _width > 0 && _height > 0)
 						{
-							_texture = new Texture2D(_width, _height, TextureFormat.ARGB32, false);
-							_texture.wrapMode = TextureWrapMode.Clamp;
-							_texture.Apply(false, false);
+							_texture = new RenderTexture(_width, _height, 0, RenderTextureFormat.Default);
+                            #if UNITY_5_6_OR_NEWER
+                            _texture.autoGenerateMips = false;
+                            #endif
+                            _texture.useMipMap = false;
+                            if (_useTextureMips && (!_isWebGL1 || (Mathf.IsPowerOfTwo(_width) && Mathf.IsPowerOfTwo(_height))))
+                            {
+                                // Mip generation only supported in WebGL 2.0, or WebGL 1.0 when using power-of-two textures
+                                _texture.useMipMap = true;
+                            }
+                            _texture.Create();
 							_cachedTextureNativePtr = _texture.GetNativeTexturePtr();
 							ApplyTextureProperties(_texture);
+
+                            // Textures in WebGL 2.0 don't require texImage2D as they are already recreated with texStorage2D
+							AVPPlayerFetchVideoTexture(_playerIndex, _cachedTextureNativePtr, _isWebGL1?true:false);
 						}
 
-						if (_texture.width != _width || _texture.height != _height)
+						if (_texture != null && (_texture.width != _width || _texture.height != _height))
 						{
-							_texture.Resize(_width, _height, TextureFormat.ARGB32, false);
-							_texture.Apply(false, false);
+                            RenderTexture.Destroy(_texture);
+							_texture = new RenderTexture(_width, _height, 0, RenderTextureFormat.Default);
+                            #if UNITY_5_6_OR_NEWER
+                            _texture.autoGenerateMips = false;
+                            #endif
+                            _texture.useMipMap = false;
+                            if (_useTextureMips && (!_isWebGL1 || (Mathf.IsPowerOfTwo(_width) && Mathf.IsPowerOfTwo(_height))))
+                            {
+                                // Mip generation only supported in WebGL 2.0, or WebGL 1.0 when using power-of-two textures
+                                _texture.useMipMap = true;
+                            }
+                            _texture.Create();
 							_cachedTextureNativePtr = _texture.GetNativeTexturePtr();
+                            ApplyTextureProperties(_texture);
+
+                            // Textures in WebGL 2.0 don't require texImage2D as they are already recreated with texStorage2D
+                            AVPPlayerFetchVideoTexture(_playerIndex, _cachedTextureNativePtr, _isWebGL1?true:false);
+                            #if UNITY_5_6_OR_NEWER
+                            if (_texture.useMipMap)
+                            {
+                                _texture.GenerateMips();
+                            }
+                            #endif
 						}
 
 						if (_cachedTextureNativePtr != System.IntPtr.Zero)
 						{
 							// TODO: only update the texture when the frame count changes
-							AVPPlayerFetchVideoTexture(_playerIndex, _cachedTextureNativePtr);
+							// (actually this will break the update for certain browsers such as edge and possibly safari - Sunrise)
+							AVPPlayerFetchVideoTexture(_playerIndex, _cachedTextureNativePtr, false);
+                            #if UNITY_5_6_OR_NEWER
+                            if (_texture.useMipMap)
+                            {
+                                _texture.GenerateMips();
+                            }
+                            #endif
 						}
 
 						UpdateDisplayFrameRate();
@@ -625,6 +733,16 @@ namespace RenderHeads.Media.AVProVideo
 				}
 			}
 		}
+
+		public override bool IsPlaybackStalled()
+		{
+            bool result = false;
+			if (_playerIndex > -1)
+			{
+                result = AVPPlayerIsPlaybackStalled(_playerIndex);
+            }
+            return result;
+		}        
 
 		public override string GetCurrentAudioTrackId()
 		{
