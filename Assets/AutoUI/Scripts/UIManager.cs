@@ -167,8 +167,9 @@ namespace SmalBox.AutoUI
         /// </summary>
         /// <param name="panelName">面板名字</param>
         /// <param name="closeLastPanel">打开时是否关闭当前面板，默认：false</param>
+        /// <param name="closeLastPanelNum">关闭当前面板数量，默认为1</param>
         /// <param name="args">扩展参数</param>
-        public void OpenPanel(string panelName, bool closeLastPanel = false, params object[] args)
+        public void OpenPanel(string panelName, bool closeLastPanel = false, int closeLastPanelNum = 1, params object[] args)
         {
             PanelBase panel = CreatePanel(panelName, args);
             // 新打开面板
@@ -180,7 +181,13 @@ namespace SmalBox.AutoUI
                     panelStack.Peek().OnClosing();
                     if (closeLastPanel)
                     {
-                        HidePanel(panelStack.Peek());
+                        var panelArray = panelStack.ToArray();
+                        if (closeLastPanelNum > panelArray.Length)
+                            closeLastPanelNum = panelArray.Length;
+                        for (int i = 0; i < closeLastPanelNum; i++)
+                        {
+                            HidePanel(panelArray[i]);
+                        }
                     }
                 }
                 ShowPanel(panel);
@@ -192,18 +199,26 @@ namespace SmalBox.AutoUI
         /// 返回上一级
         /// </summary>
         /// <param name="showLastPanelAnim">是否开启关闭当前面板动画</param>
-        public void ReturnPanel(bool showLastPanelAnim = false)
+        /// <param name="showPanelNum">面板返回动画时，打开上几个面板的数量，默认打开上一个</param>
+        public void ReturnPanel(bool showLastPanelAnim = false, int showPanelNum = 1)
         {
             if (panelStack.Count >= 2)
             {
                 // 栈顶面板出栈，并关闭栈顶面板
                 var topPanel = panelStack.Pop();
                 ClosePanel(topPanel.GetType().Name);
-                // 打开当前栈顶面板
-                topPanel = panelStack.Peek();
-                topPanel.OnShowing();
+                // 打开当前 栈顶面板
+                panelStack.Peek().OnShowing();
                 if (showLastPanelAnim)
-                    ShowPanel(topPanel);
+                {
+                    var panelArray = panelStack.ToArray();
+                    if (showPanelNum > panelArray.Length)
+                        showPanelNum = panelArray.Length;
+                    for (int i = 0; i < showPanelNum; i++)
+                    {
+                        ShowPanel(panelArray[i]);
+                    }
+                }
             }
         }
         /// <summary>

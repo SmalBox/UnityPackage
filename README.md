@@ -3,9 +3,10 @@
 ## 简介
    - **AutoUI框架**来组织**页面**切换的通用逻辑。
    - 只需定制每个**页面**的业务逻辑内容，将页面的切换交给框架来处理。
-   - *当前版本:* **AutoUI-V0.029**
+   - *当前版本:* **AutoUI-V0.0291**
       - 更新内容：
-         - 添加实用工具 AutoUIUtilities 读取CSV（Comma Separated Value 逗号分隔符文件）基本读取功能。
+         - 更新框架方法：OpenPanel 和 ReturnPanel，添加打开或关闭时，可以控制打开或关闭几层页面（默认为1层，更新不影响之前的打开关闭页面的方法调用）。
+         - 实测 实用工具 AutoUIUtilities 读取CSV 在打包后失效，待后续修复。
    - *Author:* [SmalBox](https://smalbox.top),*GitHub:* [GitHub/SmalBox](https://github.com/smalbox)
 
 ## 功能
@@ -49,8 +50,9 @@
       /// </summary>
       /// <param name="panelName">面板名字</param>
       /// <param name="closeLastPanel">打开时是否关闭当前面板，默认：false</param>
+      /// <param name="closeLastPanelNum">关闭当前面板数量，默认为1</param>
       /// <param name="args">扩展参数</param>
-      public void OpenPanel(string panelName, bool closeLastPanel = false, params object[] args)
+      public void OpenPanel(string panelName, bool closeLastPanel = false, int closeLastPanelNum = 1, params object[] args)
       ```
    - **返回上一级**
       ``` c#
@@ -58,7 +60,8 @@
       /// 返回上一级
       /// </summary>
       /// <param name="showLastPanelAnim">是否开启关闭当前面板动画</param>
-      public void ReturnPanel(bool showLastPanelAnim = false)
+      /// <param name="showPanelNum">面板返回动画时，打开上几个面板的数量，默认打开上一个</param>
+      public void ReturnPanel(bool showLastPanelAnim = false, int showPanelNum = 1)
       ```
    - **返回任意级别菜单**
       ``` c#
