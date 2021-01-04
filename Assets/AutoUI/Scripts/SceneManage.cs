@@ -8,7 +8,7 @@ using SmalBox.AutoUI;
 
 public class SceneManage : MonoBehaviour
 {
-    public GameObject msg;
+    // public GameObject msg;
     private void Awake()
     {
         // 初始化点击次数
@@ -24,10 +24,10 @@ public class SceneManage : MonoBehaviour
         UIManager.instance.OpenPanel("StandbyPage");
 
         //Debug.Log(AutoUIUtilities.GetCSVInfo("/Config/Test.csv", 3, 3));
-        List<List<string>> testCSV;
-        AutoUIUtilities.GetCSVInfoToList("/Config/Test.csv", out testCSV);
-        msg.GetComponent<Text>().text = string.Format("Test.csv 中有{0}行，有{1}列", testCSV.Count, testCSV[0].Count);
-        Debug.Log(string.Format("Test.csv 中有{0}行，有{1}列", testCSV.Count, testCSV[0].Count));
+        //List<List<string>> testCSV;
+        //AutoUIUtilities.GetCSVInfoToList("/Config/Test.csv", out testCSV, msg);
+        //msg.GetComponent<Text>().text = string.Format("Test.csv 中有{0}行，有{1}列", testCSV.Count, testCSV[0].Count);
+        //Debug.Log(string.Format("Test.csv 中有{0}行，有{1}列", testCSV.Count, testCSV[0].Count));
     }
     private void Update()
     {
@@ -52,9 +52,8 @@ public class SceneManage : MonoBehaviour
         }
         if (Input.GetMouseButtonDown(0))
         {
-            GetComponent<UDPClient>().Send("I'm Client");
+            //GetComponent<UDPClient>().Send("I'm Client");
         }
-        
     }
 
 }

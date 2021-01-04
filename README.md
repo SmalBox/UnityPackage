@@ -3,10 +3,9 @@
 ## 简介
    - **AutoUI框架**来组织**页面**切换的通用逻辑。
    - 只需定制每个**页面**的业务逻辑内容，将页面的切换交给框架来处理。
-   - *当前版本:* **AutoUI-V0.0291**
+   - *当前版本:* **AutoUI-V0.0292**
       - 更新内容：
-         - 更新框架方法：OpenPanel 和 ReturnPanel，添加打开或关闭时，可以控制打开或关闭几层页面（默认为1层，更新不影响之前的打开关闭页面的方法调用）。
-         - 实测 实用工具 AutoUIUtilities 读取CSV 在打包后失效，待后续修复。
+         - 修复 实用工具 AutoUIUtilities 读取CSV 在打包后失效问题。
    - *Author:* [SmalBox](https://smalbox.top),*GitHub:* [GitHub/SmalBox](https://github.com/smalbox)
 
 ## 功能

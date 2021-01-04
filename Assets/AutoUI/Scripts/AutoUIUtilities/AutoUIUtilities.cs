@@ -6,6 +6,7 @@ using CsvHelper;
 using System.Globalization;
 using System.Text;
 using System.Runtime.InteropServices.WindowsRuntime;
+using UnityEngine.UI;
 
 namespace SmalBox.AutoUI
 {
@@ -74,27 +75,33 @@ namespace SmalBox.AutoUI
         /// <param name="path">相对StreamingAssets的路径以斜杠开头</param>
         /// <param name="csvTable">List二维表对象，读取后将赋值给此二位列表</param>
         /// <param name="openLog">是否在读取时打开log输出，默认为：false</param>
-        public static void GetCSVInfoToList(string path, out List<List<string>> csvTable, bool openLog = false)
+        public static void GetCSVInfoToList(string path, out List<List<string>> csvTable, GameObject msg, bool openLog = false)
         {
             csvTable = new List<List<string>>();
+            msg.GetComponent<Text>().text = "csvhelper文件读取前：" + Application.streamingAssetsPath + path;
             // 读取csv文件存入csvTable中
-            using (var reader = new StreamReader(Application.streamingAssetsPath + path, Encoding.GetEncoding("GBK")))
-            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            //using (var reader = new StreamReader(Application.streamingAssetsPath + path, Encoding.GetEncoding("GBK")))
+            using (var reader = new StreamReader(Application.streamingAssetsPath + path, Encoding.GetEncoding("UTF-8")))
             {
-                csv.Configuration.HasHeaderRecord = false;
-                int index = 0;
-                while (csv.Read())
+                msg.GetComponent<Text>().text = "csvhelper读取前";
+                using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
                 {
-                    List<string> tempList = new List<string>();
-                    var columnCount = csv.Context.Record.Length;
-                    for (int i = 0; i < columnCount; i++)
+                    msg.GetComponent<Text>().text = "csvhelper读取中";
+                    csv.Configuration.HasHeaderRecord = false;
+                    int index = 0;
+                    while (csv.Read())
                     {
-                        tempList.Add(csv.GetField<string>(i));
-                        if (openLog)
-                            Debug.Log("行：" + index + ", 列：" + i + ", 数据：" + csv.GetField<string>(i));
+                        List<string> tempList = new List<string>();
+                        var columnCount = csv.Context.Record.Length;
+                        for (int i = 0; i < columnCount; i++)
+                        {
+                            tempList.Add(csv.GetField<string>(i));
+                            if (openLog)
+                                Debug.Log("行：" + index + ", 列：" + i + ", 数据：" + csv.GetField<string>(i));
+                        }
+                        csvTable.Add(tempList);
+                        index++;
                     }
-                    csvTable.Add(tempList);
-                    index++;
                 }
             }
         }

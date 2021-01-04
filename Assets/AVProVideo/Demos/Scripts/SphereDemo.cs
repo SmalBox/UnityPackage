@@ -51,7 +51,7 @@ namespace RenderHeads.Media.AVProVideo.Demos
 				}
 			}
 			#else
-			result = (UnityEngine.VR.VRDevice.isPresent);
+			result = (UnityEngine.XR.XRDevice.isPresent);
 			#endif
 		#endif
 			return result;
@@ -93,13 +93,13 @@ namespace RenderHeads.Media.AVProVideo.Demos
 					#if UNITY_2019_3_OR_NEWER
 					// TODO: should be using XRInputSubsystem.TryRecenter();
 					#else
-					UnityEngine.VR.InputTracking.Recenter();
+					UnityEngine.XR.InputTracking.Recenter();
 					#endif
 				}
 #if UNITY_EDITOR || UNITY_STANDALONE_WIN
 				if (_allowVrToggle && Input.GetKeyDown(KeyCode.V))
 				{
-					UnityEngine.VR.VRSettings.enabled = !UnityEngine.VR.VRSettings.enabled;
+					UnityEngine.XR.XRSettings.enabled = !UnityEngine.XR.XRSettings.enabled;
 				}
 #endif
 			}
