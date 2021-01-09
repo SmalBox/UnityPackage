@@ -166,10 +166,10 @@ namespace SmalBox.AutoUI
         /// 打开面板
         /// </summary>
         /// <param name="panelName">面板名字</param>
-        /// <param name="closeLastPanel">打开时是否关闭当前面板，默认：false</param>
+        /// <param name="closeLastPanel">打开时是否关闭当前面板，默认：true</param>
         /// <param name="closeLastPanelNum">关闭当前面板数量，默认为1</param>
         /// <param name="args">扩展参数</param>
-        public void OpenPanel(string panelName, bool closeLastPanel = false, int closeLastPanelNum = 1, params object[] args)
+        public void OpenPanel(string panelName, bool closeLastPanel = true, int closeLastPanelNum = 1, params object[] args)
         {
             PanelBase panel = CreatePanel(panelName, args);
             // 新打开面板
@@ -198,9 +198,9 @@ namespace SmalBox.AutoUI
         /// <summary>
         /// 返回上一级
         /// </summary>
-        /// <param name="showLastPanelAnim">是否开启关闭当前面板动画</param>
+        /// <param name="showLastPanelAnim">是否开启关闭当前面板动画，默认：true</param>
         /// <param name="showPanelNum">面板返回动画时，打开上几个面板的数量，默认打开上一个</param>
-        public void ReturnPanel(bool showLastPanelAnim = false, int showPanelNum = 1)
+        public void ReturnPanel(bool showLastPanelAnim = true, int showPanelNum = 1)
         {
             if (panelStack.Count >= 2)
             {
@@ -225,9 +225,9 @@ namespace SmalBox.AutoUI
         /// 返回任意级别菜单(从当前页面切换到栈指定的某层，销毁当前到层之间的栈记录)
         /// </summary>
         /// <param name="layer">返回面板堆栈的层数，层数从0开始</param>
-        /// <param name="showLastPanelAnim">打开时是否关闭当前面板，默认：false</param>
+        /// <param name="showLastPanelAnim">打开时是否关闭当前面板，默认：true</param>
         /// <param name="args"></param>
-        public void ReturnPanel(int layer, bool showLastPanelAnim = false, params object[] args)
+        public void ReturnPanel(int layer, bool showLastPanelAnim = true, params object[] args)
         {
             if (layer >= panelStack.Count - 1 || panelStack.Count < 2) return;
             // 栈顶面板出栈，并关闭栈顶面板

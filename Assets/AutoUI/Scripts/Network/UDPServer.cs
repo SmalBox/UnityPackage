@@ -3,23 +3,23 @@ using System.Collections.Generic;
 using UnityEngine;
 using SmalBox.AutoUI;
 
-using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System;
 
 public class UDPServer : MonoBehaviour
 {
-    public Action<string> SocketReceiveCallBack;
-
     private string clientIP;
     private string clientPort;
 
     private Socket serverSocket;
+    // 消息接收 CallBack, 注册这个回调来接收处理UDP客户端收到的信息
+    public Action<string> SocketReceiveCallBack;
 
     private string recStr;
-    public string RecStr
+    private string RecStr
     {
         get
         {
@@ -32,8 +32,6 @@ public class UDPServer : MonoBehaviour
             SocketReceiveCallBack?.Invoke(recStr);
         }
     }
-    private string sendStr;
-
     private byte[] recData = new byte[1024];
     private byte[] sendData = new byte[1024];
 
@@ -41,17 +39,24 @@ public class UDPServer : MonoBehaviour
 
     private void Awake()
     {
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.quitting += (() => serverThread.Abort());
+#endif
         InitUDPServer();
     }
     private void InitUDPServer()
     {
         // 获取绑定的端口
-        int serverPort = System.Convert.ToInt32(AutoUIUtilities.GetInfoForConfig("UDPServerPort"));
+        int serverPort = System.Convert.ToInt32(AutoUIUtilities.GetInfoForConfig("LocalUDPServerPort"));
+        string severrIP = AutoUIUtilities.GetInfoForConfig("LocalUDPServerIP");
         serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-        serverSocket.Bind(new IPEndPoint(IPAddress.Parse("127.0.0.1"), serverPort));
+        serverSocket.Bind(new IPEndPoint(IPAddress.Parse(severrIP), serverPort));
 
         serverThread = new Thread(new ThreadStart(Receive));
         serverThread.Start();
+
+        // 开启协程检查监听服务是否还在，如果不在则重新启动这个监听，防止监听被kill掉。
+        StartCoroutine(CheckThread());
     }
     private void Send(string sendStr, EndPoint endPoint)
     {
@@ -64,11 +69,29 @@ public class UDPServer : MonoBehaviour
         while (true)
         {
             recData = new byte[1024];
-            EndPoint clientEnd = new IPEndPoint(IPAddress.Any, 0);
+            EndPoint clientEnd = new IPEndPoint(IPAddress.Any, System.Convert.ToInt32(AutoUIUtilities.GetInfoForConfig("UDPServerPort")));
             var recLen = serverSocket.ReceiveFrom(recData, ref clientEnd);
             RecStr = Encoding.ASCII.GetString(recData, 0, recLen);
-            Debug.Log("收到来自" + clientEnd.ToString() + "消息：" + RecStr);
-            Send("Server  received msg :" + RecStr, clientEnd);
+            //Debug.Log("收到来自" + clientEnd.ToString() + "消息：" + RecStr);
+            //Send("Server  received msg :" + RecStr, clientEnd);
         }
+    }
+
+    private IEnumerator CheckThread()
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(1);
+            if (serverThread == null)
+            {
+                serverThread = new Thread(new ThreadStart(Receive));
+                serverThread.Start();
+            }
+        }
+    }
+
+    private void OnApplicationQuit()
+    {
+        serverThread.Abort();
     }
 }

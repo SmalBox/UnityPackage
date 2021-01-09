@@ -32,6 +32,7 @@ RectTransform:
   m_Children:
   - {fileID: 6055936361341024030}
   - {fileID: 4296715569704873066}
+  - {fileID: 4649922934224542362}
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -91,6 +92,71 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   layer: 0
   mediaPlayer: {fileID: 2988001746311472917}
+--- !u!1 &4273740477869065881
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4649922934224542362}
+  - component: {fileID: 8640421782018432382}
+  m_Layer: 0
+  m_Name: sample_webm_VP8
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4649922934224542362
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4273740477869065881}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: -71}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 237670921327347549}
+  m_RootOrder: 2
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!328 &8640421782018432382
+VideoPlayer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4273740477869065881}
+  m_Enabled: 1
+  m_VideoClip: {fileID: 32900000, guid: cb8c66479a4e4404386e4b0d7a6fb171, type: 3}
+  m_TargetCameraAlpha: 1
+  m_TargetCamera3DLayout: 0
+  m_TargetCamera: {fileID: 0}
+  m_TargetTexture: {fileID: 0}
+  m_TimeReference: 0
+  m_TargetMaterialRenderer: {fileID: 0}
+  m_TargetMaterialProperty: _MainTex
+  m_RenderMode: 0
+  m_AspectRatio: 2
+  m_DataSource: 0
+  m_PlaybackSpeed: 1
+  m_AudioOutputMode: 2
+  m_TargetAudioSources:
+  - {fileID: 0}
+  m_DirectAudioVolumes:
+  - 1
+  m_Url: 
+  m_EnabledAudioTracks: 01
+  m_DirectAudioMutes: 00
+  m_ControlledAudioTrackCount: 1
+  m_PlayOnAwake: 1
+  m_SkipOnDrop: 1
+  m_Looping: 0
+  m_WaitForFirstFrame: 1
+  m_FrameReadyEventEnabled: 0
 --- !u!1 &6009448129329734527
 GameObject:
   m_ObjectHideFlags: 0
@@ -193,9 +259,8 @@ MonoBehaviour:
   m_Resample: 0
   m_ResampleMode: 0
   m_ResampleBufferSize: 5
-  m_DebugGui: 0
-  m_DebugGuiControls: 1
   m_Persistent: 0
+  m_videoMapping: 0
   m_StereoPacking: 0
   m_AlphaPacking: 0
   m_DisplayDebugStereoColorTint: 0
@@ -205,11 +270,23 @@ MonoBehaviour:
   m_LoadSubtitles: 0
   m_SubtitleLocation: 2
   m_SubtitlePath: 
+  m_AudioHeadTransform: {fileID: 0}
+  m_AudioFocusEnabled: 0
+  m_AudioFocusTransform: {fileID: 0}
+  m_AudioFocusWidthDegrees: 90
+  m_AudioFocusOffLevelDB: 0
   m_events:
     m_PersistentCalls:
       m_Calls: []
     m_TypeName: RenderHeads.Media.AVProVideo.MediaPlayerEvent, Assembly-CSharp, Version=0.0.0.0,
       Culture=neutral, PublicKeyToken=null
+  m_eventMask: -1
+  m_forceFileFormat: 0
+  _pauseMediaOnAppPause: 1
+  _playMediaOnAppUnpause: 1
+  m_sourceSampleRate: 0
+  m_sourceChannels: 0
+  m_manuallySetAudioSourceProperties: 0
   _optionsWindows:
     overridePath: 0
     pathLocation: 2
@@ -219,31 +296,56 @@ MonoBehaviour:
     useUnityAudio: 0
     forceAudioResample: 1
     useTextureMips: 0
-    useLowLatency: 0
+    hintAlphaChannel: 0
     forceAudioOutputDeviceName: 
+    preferredFilters: []
+    enableAudio360: 0
+    audio360ChannelMode: 0
   _optionsMacOSX:
     overridePath: 0
     pathLocation: 2
     path: 
+    audioMode: 0
+    httpHeaders: []
     httpHeaderJson: 
+    keyServerURLOverride: 
+    keyServerAuthToken: 
+    base64EncodedKeyBlob: 
   _optionsIOS:
     overridePath: 0
     pathLocation: 2
     path: 
-    useYpCbCr420Textures: 0
+    audioMode: 0
+    httpHeaders: []
     httpHeaderJson: 
+    keyServerURLOverride: 
+    keyServerAuthToken: 
+    base64EncodedKeyBlob: 
+    useYpCbCr420Textures: 0
+    resumePlaybackOnAudioSessionRouteChange: 0
   _optionsTVOS:
     overridePath: 0
     pathLocation: 2
     path: 
-    useYpCbCr420Textures: 0
+    audioMode: 0
+    httpHeaders: []
     httpHeaderJson: 
+    keyServerURLOverride: 
+    keyServerAuthToken: 
+    base64EncodedKeyBlob: 
+    useYpCbCr420Textures: 0
+    resumePlaybackOnAudioSessionRouteChange: 0
   _optionsAndroid:
     overridePath: 0
     pathLocation: 2
     path: 
+    videoApi: 2
     useFastOesPath: 0
     showPosterFrame: 0
+    enableAudio360: 0
+    audio360ChannelMode: 0
+    preferSoftwareDecoder: 0
+    httpHeaders: []
     httpHeaderJson: 
     fileOffset: 0
   _optionsWindowsPhone:
@@ -254,7 +356,6 @@ MonoBehaviour:
     useUnityAudio: 0
     forceAudioResample: 1
     useTextureMips: 0
-    useLowLatency: 0
   _optionsWindowsUWP:
     overridePath: 0
     pathLocation: 2
@@ -263,11 +364,12 @@ MonoBehaviour:
     useUnityAudio: 0
     forceAudioResample: 1
     useTextureMips: 0
-    useLowLatency: 0
   _optionsWebGL:
     overridePath: 0
     pathLocation: 2
     path: 
+    externalLibrary: 0
+    useTextureMips: 0
   _optionsPS4:
     overridePath: 0
     pathLocation: 2

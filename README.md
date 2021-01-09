@@ -3,9 +3,18 @@
 ## 简介
    - **AutoUI框架**来组织**页面**切换的通用逻辑。
    - 只需定制每个**页面**的业务逻辑内容，将页面的切换交给框架来处理。
-   - *当前版本:* **AutoUI-V0.0292**
+   - *当前版本:* **AutoUI-V0.03**
       - 更新内容：
-         - 修复 实用工具 AutoUIUtilities 读取CSV 在打包后失效问题。
+         - 优化左右滑动模块的视频加载性能
+            - 更改原来的avproVideo自动加载为根据路径从硬盘读取。
+            - 在工程中，将对应播放的每个视频MediaPlayer添加到组件SwipeSwitch的LoadingVideoGroup中。MediaPlayer中正常选择要播放的视频路径。SwipeWitch会自动获取MediaPlayer中的路径，并在滑动到当前视频内容根据路径加载视频，其他的视频会全部关闭掉。实测不会因为滑动页中内容过多导致GPU使用率上升
+         - 优化UDPServer中监听线程的稳定性
+            - 开启一个协程来保护监听线程正常工作。
+            - 使用 LocalUDPServerIP 和 LocalUDPServerPort 来作为默认配置文件中网络配置参数。
+         - 增加从配置文件中指定地址获取数据。留出数据处理的delegate来插入回调方法。
+         - 将框架中打开和返回的接口，更改为默认打开时关闭前一层页面。返回接口更改为默认打开前一层页面。
+            - 改动后默认操作为打开和关闭时都会对应打开或关闭前一层页面。可以在默认调用接口的情况下获得比较好的性能表现
+
    - *Author:* [SmalBox](https://smalbox.top),*GitHub:* [GitHub/SmalBox](https://github.com/smalbox)
 
 ## 功能
@@ -215,4 +224,11 @@
          /// <returns></returns>
          public static string GetCSVInfo(string path, int row, int column)
          ```
-         - *注：本解析CSV文件使用的是[CSVHelper](https://joshclose.github.io/CsvHelper/)解析库，[CSVHelper GitHub](https://github.com/JoshClose/CsvHelper)*。对应的库文件在 Assets/Plugins/CSVHelper。使用VisuaStudio的NuGet工具可以安装此库（库官方给出的方法）。
+         - *注：本解析CSV文件使用的是[CSVHelper](https://joshclose.github.io/CsvHelper/)解析库，[CSVHelper GitHub](https://github.com/JoshClose/CsvHelper)*。对应的库文件在 Assets/Plugins/CSVHelper。使用VisuaStudio的NuGet工具可以安装此库（库官方给出的方法）无法在Unity中直接使用，需要手动将其对平台的dll复制到Plugins中。框架中给出的方案是使用NuGetForUnity包管理来解决外部dll导入时的依赖问题，他将在Assets下Packages中安装所有的dll依赖。
+
+## 素材相关
+   - **透明素材解决方案**
+      - 小素材，可以用Animation直接做序列帧
+      - 大素材，根据实际内容需要，可以优化的少量序列帧做素材压缩。除此之外都用 视频播放来解决。视频播放透明素材分两种：
+         - 左内容右通道或上内容下通道的透明通道视频。（缺点是不能在编辑器里直接截取首帧作为第一帧图，视频大小翻倍。优点是普通MP4封装即可。不需要特殊视频编码格式）
+         - 播放器支持的自带通道的视频。（对导出视频要求严格，并且只支持win和mac平台，不支持移动平台

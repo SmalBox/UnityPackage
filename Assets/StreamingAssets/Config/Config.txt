@@ -1,3 +1,5 @@
 ##AutoReturnTime##:30
 ##UDPServerIP##:127.0.0.1
 ##UDPServerPort##:55666
+##LocalUDPServerIP##:127.0.0.1
+##LocalUDPServerPort##:22333
