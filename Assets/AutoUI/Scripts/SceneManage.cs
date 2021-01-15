@@ -43,7 +43,7 @@ public class SceneManage : MonoBehaviour
             {
                 // 倒计时
                 GlobalVar.instance.globalCountdown -= Time.deltaTime;
-                Debug.Log("剩余时间：" + GlobalVar.instance.globalCountdown);
+                //Debug.Log("剩余时间：" + GlobalVar.instance.globalCountdown);
             }else
             {
                 // 返回待机页

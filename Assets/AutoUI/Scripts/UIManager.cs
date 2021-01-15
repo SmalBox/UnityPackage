@@ -18,6 +18,8 @@ namespace SmalBox.AutoUI
         public static UIManager instance;
         private UIManager() { }
 
+        // PanelBufferPool 冲缓冲池父对象
+        public GameObject panelBufferPoolParent;
 
         // Panel 父对象
         public GameObject uiPanel;
@@ -30,6 +32,9 @@ namespace SmalBox.AutoUI
 
         // 已打开面板字典
         public static Dictionary<string, PanelBase> openedDict;
+
+        // 面板缓冲池
+        public static Dictionary<string, GameObject> panelBufferPool;
 
         // 面板堆栈
         public Stack<PanelBase> panelStack;
@@ -81,6 +86,9 @@ namespace SmalBox.AutoUI
             // 初始化已打开面板字典
             openedDict = new Dictionary<string, PanelBase>();
 
+            // 初始化页面缓冲池
+            panelBufferPool = new Dictionary<string, GameObject>();
+
             // 初始化面板堆栈
             panelStack = new Stack<PanelBase>();
         }
@@ -92,11 +100,23 @@ namespace SmalBox.AutoUI
             string name = panelName;
             if (openedDict.ContainsKey(name))
                 return null;
-            // 根据参数初始化面板
-            GameObject instantiatePanel = (GameObject)Instantiate(Resources.Load(skinDict[name]), panelLayerParentObj[0].transform);
-            PanelBase panel = instantiatePanel.GetComponent(Assembly.Load("Assembly-CSharp").GetType(panelName)) as PanelBase;
-            //Debug.Log("初始化当前面板到：" + panel.layer + "层级");
-            instantiatePanel.transform.SetParent(panelLayerParentObj[(int)panel.layer].transform);
+            GameObject instantiatePanel;
+            PanelBase panel;
+            // 先查询缓冲池里是否有面板
+            if (panelBufferPool.ContainsKey(name))
+            {
+                // 缓冲池里有面板时，打开缓冲池里的面板
+                instantiatePanel = panelBufferPool[name];
+                panel = panelBufferPool[name].GetComponent(Assembly.Load("Assembly-CSharp").GetType(panelName)) as PanelBase;
+                panelBufferPool[name].transform.SetParent(panelLayerParentObj[(int)panel.layer].transform);
+	        }else
+            { 
+                // 根据参数初始化面板
+                instantiatePanel = (GameObject)Instantiate(Resources.Load(skinDict[name]), panelLayerParentObj[0].transform);
+                instantiatePanel.name = panelName;
+                panel = instantiatePanel.GetComponent(Assembly.Load("Assembly-CSharp").GetType(panelName)) as PanelBase;
+                instantiatePanel.transform.SetParent(panelLayerParentObj[(int)panel.layer].transform);
+	        }
 
             panel.Init(args);
             // 加载皮肤
@@ -149,8 +169,13 @@ namespace SmalBox.AutoUI
             yield return new WaitForSeconds(GlobalVar.animTimeOfClosePage);
             // 从打开字典中移出
             panel.OnClosed();
-            GameObject.Destroy(panel.skin);
-            Component.Destroy(panel);
+            // 将关闭的面板加入缓冲池
+            if (!panelBufferPool.ContainsKey(panel.name))
+                panelBufferPool.Add(panel.name, panel.skin);
+            // 面板移动到缓冲池层级
+            panelBufferPool[panel.name].transform.SetParent(panelBufferPoolParent.transform);
+            //GameObject.Destroy(panel.skin);
+            //Component.Destroy(panel);
         }
         #endregion
 

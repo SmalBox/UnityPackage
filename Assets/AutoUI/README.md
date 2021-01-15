@@ -3,17 +3,10 @@
 ## 简介
    - **AutoUI框架**来组织**页面**切换的通用逻辑。
    - 只需定制每个**页面**的业务逻辑内容，将页面的切换交给框架来处理。
-   - *当前版本:* **AutoUI-V0.03**
+   - *当前版本:* **AutoUI-V0.031**
       - 更新内容：
-         - 优化左右滑动模块的视频加载性能
-            - 更改原来的avproVideo自动加载为根据路径从硬盘读取。
-            - 在工程中，将对应播放的每个视频MediaPlayer添加到组件SwipeSwitch的LoadingVideoGroup中。MediaPlayer中正常选择要播放的视频路径。SwipeWitch会自动获取MediaPlayer中的路径，并在滑动到当前视频内容根据路径加载视频，其他的视频会全部关闭掉。实测不会因为滑动页中内容过多导致GPU使用率上升
-         - 优化UDPServer中监听线程的稳定性
-            - 开启一个协程来保护监听线程正常工作。
-            - 使用 LocalUDPServerIP 和 LocalUDPServerPort 来作为默认配置文件中网络配置参数。
-         - 增加从配置文件中指定地址获取数据。留出数据处理的delegate来插入回调方法。
-         - 将框架中打开和返回的接口，更改为默认打开时关闭前一层页面。返回接口更改为默认打开前一层页面。
-            - 改动后默认操作为打开和关闭时都会对应打开或关闭前一层页面。可以在默认调用接口的情况下获得比较好的性能表现
+         - 加入**缓冲池**来优化打开和关闭面板时的性能开销。（打开过的页面会进入缓冲池。缓冲池会占用一定的显存和内存，来缓存页面加速页面加载。加入缓冲池能有效的解决页面切换时的性能开销以解决瞬时性能开销暴涨导致的程序崩溃。）
+            - 加入缓冲池不影响程序接口，按照事例场景中添加一个PanelBufferPoolParent，并将其拖拽到UIManager的PanelBufferPoolParent属性上即可。
 
    - *Author:* [SmalBox](https://smalbox.top),*GitHub:* [GitHub/SmalBox](https://github.com/smalbox)
 
