@@ -3,10 +3,9 @@
 ## 简介
    - **AutoUI框架**来组织**页面**切换的通用逻辑。
    - 只需定制每个**页面**的业务逻辑内容，将页面的切换交给框架来处理。
-   - *当前版本:* **AutoUI-V0.031**
+   - *当前版本:* **AutoUI-V0.032**
       - 更新内容：
-         - 加入**缓冲池**来优化打开和关闭面板时的性能开销。（打开过的页面会进入缓冲池。缓冲池会占用一定的显存和内存，来缓存页面加速页面加载。加入缓冲池能有效的解决页面切换时的性能开销以解决瞬时性能开销暴涨导致的程序崩溃。）
-            - 加入缓冲池不影响程序接口，按照事例场景中添加一个PanelBufferPoolParent，并将其拖拽到UIManager的PanelBufferPoolParent属性上即可。
+         - 加入**串口通信组件**
 
    - *Author:* [SmalBox](https://smalbox.top),*GitHub:* [GitHub/SmalBox](https://github.com/smalbox)
 
@@ -135,6 +134,13 @@
          - 获取本组件，注册 **SocketReceiveCallBack** 用来接收消息，用 **Send** 发送消息。
          - *注：本组件需要实用工具中的AutoUIUtilities.GetInfoForConfig来帮助获取ip端口配置文件。*
          - 在 StreamingAssets/Config/Config.txt 中 的 **UDPServerIP**, **UDPServerPort** 属性填写对应的ip和端口号。在程序中获取此组件注册回调来接收消息，调用Send可以发送消息（消息是ASCII编码，不要输入此编码外的字符，例如不要传输中文，使用ASCII表中的字符）。
+   - **串口组件**
+      - 串口组件位于 AutoUI/Scripts/SerialPort/ 中
+      - **AutoUISerialPort**
+         - 获取本组件，注册 **ComReceiveCallBack** 用来接收串口消息。
+         - *注：本组件需要实用工具中的AutoUIUtilities.GetInfoForConfig来帮助获取ComName配置文件。*
+         - 在 Inspector 中可配置串口名、波特率等串口配置，当开启 isConfigComName 选项后，可修改配置文件中的 COMName 为实际串口名。
+         - 组件可接收串口发来的消息，并且自动计算校验码解析命令（已做了错误命令过滤），在成功接收到完整命令后调用 ComReceiveCallBack 回调。
 
 ## 高级功能
    - **创建页面管理工具**
