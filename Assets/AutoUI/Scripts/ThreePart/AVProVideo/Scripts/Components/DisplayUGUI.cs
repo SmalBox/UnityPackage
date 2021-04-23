@@ -69,6 +69,8 @@ namespace RenderHeads.Media.AVProVideo
 		[SerializeField]
 		public Texture _defaultTexture;
 
+		public string streamingAssetsImgPath;
+
 		private int _lastWidth;
 		private int _lastHeight;
 		private bool _flipY;

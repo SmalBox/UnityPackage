@@ -81,6 +81,31 @@ namespace RenderHeads.Media.AVProVideo.Editor
 
 	        EditorGUILayout.PropertyField(m_Movie);
 			EditorGUILayout.PropertyField(m_DefaultTexture);
+
+			EditorGUILayout.BeginHorizontal();
+			DisplayUGUI image = target as DisplayUGUI;
+			image.streamingAssetsImgPath = EditorGUILayout.TextField("StreamingAssetsImagtPath", image.streamingAssetsImgPath);
+			if (GUILayout.Button("—°‘ÒÕº∆¨"))
+			{
+			    string[] selectedImg = SFB.StandaloneFileBrowser.OpenFilePanel("—°‘ÒÕ‚≤ø≈‰÷√Õº∆¨", Application.streamingAssetsPath, "png", false);
+			    if (selectedImg.Length > 0)
+			    {
+			        string fullName = selectedImg[0].Replace("\\", "/").Replace(Application.streamingAssetsPath, "");
+			        image.streamingAssetsImgPath = fullName;
+			        // ∂¡»°Õº∆¨
+			        if (image.streamingAssetsImgPath != "")
+			        {
+			            Texture2D tx = new Texture2D(0, 0);
+			            tx.LoadImage(
+			                System.IO.File.ReadAllBytes(Application.streamingAssetsPath + image.streamingAssetsImgPath)
+			                );
+						image._defaultTexture = tx;
+			        }
+			    }
+				GUIUtility.ExitGUI();
+			}
+			EditorGUILayout.EndHorizontal();
+
 			EditorGUILayout.PropertyField(m_NoDefaultDisplay);
 			EditorGUILayout.PropertyField(m_DisplayInEditor);
 			AppearanceControlsGUI();

@@ -3,9 +3,10 @@
 ## 简介
    - **AutoUI框架**来组织**页面**切换的通用逻辑。
    - 只需定制每个**页面**的业务逻辑内容，将页面的切换交给框架来处理。
-   - *当前版本:* **AutoUI-V0.032**
+   - *当前版本:* **AutoUI-V0.033**
       - 更新内容：
-         - 加入**串口通信组件**
+         - 加入 扩展 Ugui中Image的组件：**AutoUIImage**，扩展了Image的外部配置能力，可将图片素材放到StreamingAssets中，通过组件中选择路径的方式配置图片。可在打包后外部配置图片。
+         - 扩展 AVProVideo 中 DisplayUGUI 的首帧图片外部配置功能。可将首帧图片放入StreamingAssets中，通过选择路径的方式配置图片。*类似其选择视频的方式*
 
    - *Author:* [SmalBox](https://smalbox.top),*GitHub:* [GitHub/SmalBox](https://github.com/smalbox)
 
@@ -141,6 +142,13 @@
          - *注：本组件需要实用工具中的AutoUIUtilities.GetInfoForConfig来帮助获取ComName配置文件。*
          - 在 Inspector 中可配置串口名、波特率等串口配置，当开启 isConfigComName 选项后，可修改配置文件中的 COMName 为实际串口名。
          - 组件可接收串口发来的消息，并且自动计算校验码解析命令（已做了错误命令过滤），在成功接收到完整命令后调用 ComReceiveCallBack 回调。
+   - **扩展的UI组件**
+      - **AutoUIImage**
+         - 扩展 UI 中 Image 的组件。主要为了可在外部配置替换图片素材。
+         - 新建一个空对象，用添加组件的方式添加 AutoUIImage ，通过打开文件管理器的方式选择StreamingAssets中的图片素材。*（也可手动填写图片路径）*
+      - **DisplayUGUI**
+         - 为其添加首帧图片外部配置功能。
+         - 在组件的属性面板中选择图片即可配置外部首帧图片。
 
 ## 高级功能
    - **创建页面管理工具**

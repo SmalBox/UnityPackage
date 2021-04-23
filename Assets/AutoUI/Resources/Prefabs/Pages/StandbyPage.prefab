@@ -283,6 +283,7 @@ MonoBehaviour:
   _noDefaultDisplay: 0
   _displayInEditor: 1
   _defaultTexture: {fileID: 0}
+  streamingAssetsImgPath: 
 --- !u!114 &2988001746311472917
 MonoBehaviour:
   m_ObjectHideFlags: 0
